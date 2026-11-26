@@ -1,0 +1,1021 @@
+{
+ "_about": {
+  "bk": "BK21 FOUR(4단계) Computer Science 분야 우수 국제학술대회 목록의 인정 IF (1~4점, 정규 논문 기준)",
+  "kiise": "한국정보과학회 2024 우수학술대회 목록 등급 (최우수/우수)",
+  "sources": [
+   "https://www3.chosun.ac.kr/sites/chosun/files/recruit/2024_01/ (4단계 BK21 Computer Science 분야 우수 국제학술대회 목록 PDF)",
+   "https://gist.github.com/Pusnow/6eb933355b5cb8d31ef1abcb3c3e1206 (정보과학회 2024 등급·BK21 IF 비교표, BK 점수는 위 PDF와 대조해 일치 확인)"
+  ],
+  "key": "DBLP 키 (conf/<key>)"
+ },
+ "grades": {
+  "aaai": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "ifaamas": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "accv": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "acl": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "acns": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "acsac": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "aied": {
+   "bk": null,
+   "kiise": null
+  },
+  "aistats": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "ancs": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "arith": {
+   "bk": null,
+   "kiise": null
+  },
+  "kbse": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "asiaccs": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "asiacrypt": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "asunam": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "asplos": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "asru": {
+   "bk": null,
+   "kiise": null
+  },
+  "avss": {
+   "bk": 1,
+   "kiise": null
+  },
+  "bcb": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "bibm": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "bigdataconf": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "blockchain2": {
+   "bk": null,
+   "kiise": null
+  },
+  "bmvc": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "cade": {
+   "bk": null,
+   "kiise": null
+  },
+  "cases": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "cav": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "cc": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "coco": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "ccgrid": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "ccs": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "cgo": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "ches": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "chi": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "cidr": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "cikm": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "IEEEcloud": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "cluster": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "codaspy": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "codesisss": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "cogsci": {
+   "bk": 2,
+   "kiise": null
+  },
+  "coling": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "colt": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "concur": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "conext": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "conll": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "corl": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "cpm": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "crypto": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "cscw": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "csee": {
+   "bk": 1,
+   "kiise": null
+  },
+  "csfw": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "cvpr": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "dac": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "dasfaa": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "date": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "wdag": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "dlt": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "dsn": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "eacl": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "ecai": {
+   "bk": 1,
+   "kiise": null
+  },
+  "eccb": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "eccv": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "ecoop": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "ecrts": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "edbt": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "eurohaptics": {
+   "bk": null,
+   "kiise": null
+  },
+  "emnlp": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "emsoft": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "esa": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "esop": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "esorics": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "europar": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "eurocrypt": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "eurographics": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "eurosp": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "eurosys": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "vissym": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "fase": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "fc": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "fccm": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "fm": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "fmcad": {
+   "bk": null,
+   "kiise": null
+  },
+  "focs": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "fpga": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "fpl": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "fse": {
+   "bk": 4,
+   "kiise": "우수"
+  },
+  "sigsoft": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "gecco": {
+   "bk": 1,
+   "kiise": null
+  },
+  "hipc": {
+   "bk": 1,
+   "kiise": null
+  },
+  "hipeac": {
+   "bk": 1,
+   "kiise": null
+  },
+  "hpca": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "hpdc": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "hybrid": {
+   "bk": null,
+   "kiise": null
+  },
+  "si3d": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "icalp": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "icaps": {
+   "bk": 1,
+   "kiise": null
+  },
+  "icassp": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "icbc2": {
+   "bk": null,
+   "kiise": null
+  },
+  "iccad": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "iccd": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "iccps": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "iccv": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "icdcs": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "icde": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "icdm": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "icfp": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "iclp": {
+   "bk": 1,
+   "kiise": null
+  },
+  "iclr": {
+   "bk": null,
+   "kiise": "최우수"
+  },
+  "icmi": {
+   "bk": null,
+   "kiise": null
+  },
+  "icml": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "mir": {
+   "bk": 1,
+   "kiise": null
+  },
+  "acmicn": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "icnp": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "icpp": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "icpr": {
+   "bk": 1,
+   "kiise": null
+  },
+  "icra": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "ics": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "icse": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "icsm": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "icsoc": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "icst": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "icws": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "icwsm": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "iiswc": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "ijcai": {
+   "bk": 4,
+   "kiise": "우수"
+  },
+  "ijcar": {
+   "bk": 1,
+   "kiise": null
+  },
+  "ijcnlp": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "im": {
+   "bk": null,
+   "kiise": null
+  },
+  "imc": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "infocom": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "infovis": {
+   "bk": 1,
+   "kiise": null
+  },
+  "interspeech": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "ipps": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "ipmi": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "ipsn": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "iros": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "isaac": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "isbi": {
+   "bk": null,
+   "kiise": null
+  },
+  "isca": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "isit": {
+   "bk": null,
+   "kiise": null
+  },
+  "islped": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "ismar": {
+   "bk": 1,
+   "kiise": "최우수"
+  },
+  "ismb": {
+   "bk": 1,
+   "kiise": "최우수"
+  },
+  "ispass": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "issre": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "issta": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "semweb": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "its": {
+   "bk": 1,
+   "kiise": null
+  },
+  "iui": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "kdd": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "kr": {
+   "bk": 3,
+   "kiise": null
+  },
+  "lctrts": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "lics": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "lrec": {
+   "bk": null,
+   "kiise": null
+  },
+  "mascots": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "mass": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "memsys": {
+   "bk": null,
+   "kiise": null
+  },
+  "mfcs": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "miccai": {
+   "bk": 1,
+   "kiise": "최우수"
+  },
+  "micro": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "middleware": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "mlsys": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "mm": {
+   "bk": 4,
+   "kiise": "우수"
+  },
+  "mmsys": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "mobicom": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "mobihoc": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "mhci": {
+   "bk": null,
+   "kiise": null
+  },
+  "mobisys": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "models": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "msr": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "mss": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "naacl": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "ndss": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "nips": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "noms": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "nossdav": {
+   "bk": 1,
+   "kiise": null
+  },
+  "oopsla": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "pg": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "IEEEpact": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "pakdd": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "pam": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "percom": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "performance": {
+   "bk": 2,
+   "kiise": null
+  },
+  "pkc": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "pkdd": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "pldi": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "podc": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "pods": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "popl": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "ppopp": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "psb": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "raid": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "re": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "recomb": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "recsys": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "rss": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "rtas": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "rtss": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "sp": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "sac": {
+   "bk": 1,
+   "kiise": null
+  },
+  "saner": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "sas": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "sc": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "sca": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "sdm": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "sec": {
+   "bk": 1,
+   "kiise": null
+  },
+  "secon": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "sensys": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "sgp": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "sigcomm": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "sigdial": {
+   "bk": null,
+   "kiise": null
+  },
+  "siggraph": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "siggrapha": {
+   "bk": null,
+   "kiise": "최우수"
+  },
+  "sigir": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "sigmetrics": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "sigmod": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "slt": {
+   "bk": null,
+   "kiise": null
+  },
+  "cloud": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "compgeom": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "soda": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "sosp": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "soups": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "spaa": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "srds": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "stacs": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "stoc": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "swat": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "systor": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "tacas": {
+   "bk": 2,
+   "kiise": "우수"
+  },
+  "tcc": {
+   "bk": 1,
+   "kiise": null
+  },
+  "uai": {
+   "bk": 3,
+   "kiise": "우수"
+  },
+  "huc": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "uist": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "usenix": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "fast": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "nsdi": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "osdi": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "uss": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "vee": {
+   "bk": 1,
+   "kiise": null
+  },
+  "visualization": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "vldb": {
+   "bk": 4,
+   "kiise": "최우수"
+  },
+  "vmcai": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "vr": {
+   "bk": 2,
+   "kiise": "최우수"
+  },
+  "vrst": {
+   "bk": 1,
+   "kiise": "우수"
+  },
+  "wacv": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "wads": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "haptics": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "wiopt": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "wisec": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "wmt": {
+   "bk": null,
+   "kiise": null
+  },
+  "wowmom": {
+   "bk": null,
+   "kiise": "우수"
+  },
+  "wsdm": {
+   "bk": 3,
+   "kiise": "최우수"
+  },
+  "www": {
+   "bk": 4,
+   "kiise": "최우수"
+  }
+ }
+}

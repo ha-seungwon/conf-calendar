@@ -577,3 +577,22 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
 .fb-card b { font-size: 15px; }
 .fb-card span { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 .fb-card .btn { justify-self: start; margin-top: 4px; }
+
+/* ───────── 등급 · 유형 ───────── */
+.rank-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }
+.rank-row + .rank-row { margin-top: 2px; }
+.rank-label { font-size: 11px; font-weight: 700; color: var(--muted); width: 58px; }
+.rank.bk4 { border-color: color-mix(in srgb, var(--hot) 55%, transparent); color: var(--hot); background: color-mix(in srgb, var(--hot) 10%, transparent); }
+.rank.bk3 { border-color: color-mix(in srgb, var(--warm) 60%, transparent); color: var(--warm); background: color-mix(in srgb, var(--warm) 10%, transparent); }
+.rank.bk2 { border-color: color-mix(in srgb, #2f9e44 55%, transparent); color: #2f9e44; }
+.rank.muted-rank { color: var(--muted-2); border-style: dashed; }
+.venue { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: var(--surface-3); color: var(--muted); white-space: nowrap; }
+.venue.journal { background: color-mix(in srgb, #2563eb 14%, transparent); color: #2563eb; }
+:root[data-theme="dark"] .venue.journal { color: #7ea6ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .venue.journal { color: #7ea6ff; } }
+.tt-badges { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 6px; }
+.foot-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.rank-src { font-size: 10.5px; color: var(--muted-2); line-height: 1.4; margin-top: 4px; }
+.rank-row .chip { padding: 4px 9px; }
+.rank-row .rank-label { width: 100%; margin: 2px 0 -1px 2px; }
+.rank-row + .rank-row { margin-top: 8px; }

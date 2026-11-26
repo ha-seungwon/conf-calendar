@@ -97,6 +97,8 @@ ipcMain.handle('data:refresh', () => refreshFromWeb());
 
 /* ───── 자동 업데이트: GitHub Releases 의 최신 버전을 받아서 재시작 시 설치 ───── */
 let updateState = { status: 'idle' };
+let checkNow = null; // 설치된 앱에서만 채워짐
+ipcMain.handle('update:check', () => (checkNow ? checkNow() : { status: 'dev', current: app.getVersion() }));
 function sendUpdate(next) {
   updateState = { ...updateState, ...next };
   if (win && !win.isDestroyed()) win.webContents.send('update:status', updateState);
@@ -117,7 +119,16 @@ function setupAutoUpdate() {
   setTimeout(check, 5000);
   setInterval(check, 6 * 3600000);
   ipcMain.handle('update:install', () => { autoUpdater.quitAndInstall(false, true); });
-  ipcMain.handle('update:check', () => check());
+  checkNow = async () => {
+    sendUpdate({ status: 'checking' });
+    try {
+      const r = await autoUpdater.checkForUpdates();
+      if (r && r.isUpdateAvailable === false) sendUpdate({ status: 'latest' });
+    } catch (err) {
+      sendUpdate({ status: 'error', message: String((err && err.message) || err).slice(0, 200) });
+    }
+    return { ...updateState, current: app.getVersion() };
+  };
 }
 
 ipcMain.handle('update:state', () => ({ ...updateState, current: app.getVersion(), packaged: app.isPackaged }));

@@ -4,29 +4,51 @@
 const DAY = 86400000;
 
 const CATS = {
-  AI: { name: '인공지능', color: '#8b5cf6', group: 'ai' },
-  DS: { name: '아키텍처·병렬·분산·스토리지', color: '#3b82f6', group: 'sys' },
-  NW: { name: '네트워크', color: '#0ea5c6', group: 'sys' },
-  SE: { name: '시스템SW·SW공학·PL', color: '#f08c00', group: 'sys' },
+  ML: { name: '머신러닝', color: '#7c5cff', group: 'ai' },
+  CV: { name: '컴퓨터 비전', color: '#d946ef', group: 'ai' },
+  NLP: { name: '자연어처리', color: '#4f46e5', group: 'ai' },
+  ROB: { name: '로보틱스', color: '#0f766e', group: 'ai' },
+  AIG: { name: 'AI 일반·기타', color: '#a78bfa', group: 'ai' },
+  OS: { name: 'OS·분산·클라우드·스토리지', color: '#f08c00', group: 'sys' },
+  ARCH: { name: '아키텍처·하드웨어·임베디드', color: '#2563eb', group: 'sys' },
+  HPC: { name: '병렬·HPC·성능', color: '#059669', group: 'sys' },
+  NW: { name: '네트워크·모바일', color: '#0ea5c6', group: 'sys' },
+  PL: { name: 'SW공학·프로그래밍 언어', color: '#ca8a04', group: 'sys' },
   SC: { name: '보안', color: '#e5484d', group: 'etc' },
-  DB: { name: '데이터베이스·마이닝', color: '#12a594', group: 'etc' },
-  MX: { name: '교차·신흥 분야 (MLSys 등)', color: '#e93d82', group: 'etc' },
-  HI: { name: 'HCI', color: '#c050d8', group: 'etc' },
-  CG: { name: '그래픽스·멀티미디어', color: '#5fa318', group: 'etc' },
-  CT: { name: '계산 이론', color: '#6b7a90', group: 'etc' },
+  DB: { name: '데이터베이스·마이닝', color: '#14b8a6', group: 'etc' },
+  MX: { name: '교차·신흥 분야', color: '#e93d82', group: 'etc' },
+  HI: { name: 'HCI', color: '#b45309', group: 'etc' },
+  CG: { name: '그래픽스·멀티미디어', color: '#65a30d', group: 'etc' },
+  CT: { name: '계산 이론', color: '#64748b', group: 'etc' },
 };
+// DBLP 키로 세부 분야를 정한다. 목록에 없으면 원래 분류(sub)에서 기본값을 쓴다.
+const SUBCAT = {
+  ML: 'nips icml iclr aistats colt uai acml alt cpal probml log esann icann ijcnn iconip icmla',
+  CV: 'cvpr iccv eccv wacv bmvc accv fg icb icpr icdar cvc euvip',
+  NLP: 'acl emnlp naacl coling eacl conll colm ijcnlp nlpcc',
+  ROB: 'icra iros rss corl',
+  OS: 'osdi sosp eurosys usenix hotos cloud middleware apsys systor vee lisa icdcs netys IEEEcloud mlsys fast hotstorage mss ieeesec',
+  ARCH: 'isca micro hpca asplos pact ics iiswc hotchips cf hipeac dac iccad date aspdac codes fpga fccm fpt glvlsi iscas ispd itc itc-asia ets ats asap iccd ispass rtss rtas emsoft lctrts',
+  HPC: 'sc ppopp hpdc ipps icpp spaa podc cluster ccgrid europar hpcc ica3pp icpads pdcat ispa appt performance sigmetrics N',
+  PL: 'cgo',
+};
+const SUBCAT_OF = new Map(Object.entries(SUBCAT).flatMap(([cat, keys]) => keys.split(' ').map((k) => [k, cat])));
+const SUB_FALLBACK = { AI: 'AIG', DS: 'ARCH', NW: 'NW', SE: 'PL', SC: 'SC', DB: 'DB', MX: 'MX', HI: 'HI', CG: 'CG', CT: 'CT' };
 const GROUPS = [
   { id: 'ai', name: 'AI' },
   { id: 'sys', name: '시스템' },
   { id: 'etc', name: '기타 분야' },
 ];
+// 등급: BK21 FOUR 인정 IF(1~4) / 한국정보과학회 2024 우수학술대회
 const RANKS = [
-  { id: 'ccfA', label: 'CCF A', test: (r) => r.ccf === 'A' },
-  { id: 'ccfB', label: 'CCF B', test: (r) => r.ccf === 'B' },
-  { id: 'ccfC', label: 'CCF C', test: (r) => r.ccf === 'C' },
-  { id: 'coreAs', label: 'CORE A*', test: (r) => r.core === 'A*' },
-  { id: 'coreA', label: 'CORE A', test: (r) => r.core === 'A' },
+  { id: 'bk4', label: '4점', group: 'bk', test: (g) => g.bk === 4 },
+  { id: 'bk3', label: '3점', group: 'bk', test: (g) => g.bk === 3 },
+  { id: 'bk2', label: '2점', group: 'bk', test: (g) => g.bk === 2 },
+  { id: 'bk1', label: '1점', group: 'bk', test: (g) => g.bk === 1 },
+  { id: 'kTop', label: '최우수', group: 'kiise', test: (g) => g.kiise === '최우수' },
+  { id: 'kGood', label: '우수', group: 'kiise', test: (g) => g.kiise === '우수' },
 ];
+const RANK_IDS = new Set(RANKS.map((r) => r.id));
 const TYPES = {
   deadline: { name: '논문 마감', tag: '마감' },
   abstract: { name: '초록 마감', tag: '초록' },
@@ -170,8 +192,10 @@ const state = {
   view: prefs.view === 'list' ? 'list' : 'month',
   cursor: firstOfMonth(new Date()),
   q: '',
-  subs: new Set(prefs.subs || ['AI', 'DS', 'NW', 'SE']),
-  ranks: new Set(prefs.ranks || ['ccfA', 'coreAs']),
+  // v1.2에서 분야·등급 체계가 바뀌어서, 예전 설정이면 새 기본값으로
+  subs: new Set(prefs.v12 && prefs.subs ? prefs.subs
+    : Object.keys(CATS).filter((k) => CATS[k].group !== 'etc')),
+  ranks: new Set(prefs.v12 && prefs.ranks ? prefs.ranks.filter((r) => RANK_IDS.has(r)) : ['bk4', 'kTop']),
   types: new Set([...(prefs.types || ['deadline', 'abstract', 'conf']), ...(prefs.typesV2 ? [] : ['mine'])]),
   myEvents: [],
   mine: [],
@@ -188,7 +212,7 @@ const state = {
 };
 function savePrefs() {
   store.set(PREF_KEY, {
-    view: state.view, subs: [...state.subs], ranks: [...state.ranks], types: [...state.types], typesV2: true,
+    view: state.view, subs: [...state.subs], ranks: [...state.ranks], types: [...state.types], typesV2: true, v12: true,
     starredOnly: state.starredOnly, etcOpen: state.etcOpen, sysExtras: state.sysExtras, theme: state.theme,
   });
 }
@@ -197,7 +221,8 @@ function savePrefs() {
 function buildEvents(confs) {
   const evs = [];
   for (const c of confs) {
-    c.cat = CATS[c.sub] ? c.sub : 'MX';
+    c.cat = SUBCAT_OF.get(c.dblp) || SUB_FALLBACK[c.sub] || 'MX';
+    c.grade = c.grade || { bk: 0, kiise: '' };
     for (const ed of c.editions) {
       ed.timeline.forEach((t, i) => {
         for (const type of POINT_TYPES) {
@@ -245,7 +270,7 @@ function confMatches(c) {
   if (starred) return true;
   if (state.sysExtras && SYS_EXTRAS.includes(c.title)) return true;
   if (!state.subs.has(c.cat)) return false;
-  if (state.ranks.size && !RANKS.some((r) => state.ranks.has(r.id) && r.test(c.rank))) return false;
+  if (state.ranks.size && !RANKS.some((r) => state.ranks.has(r.id) && r.test(c.grade))) return false;
   return true;
 }
 
@@ -403,11 +428,18 @@ function renderHeader() {
   for (const b of document.querySelectorAll('#viewSeg button')) b.classList.toggle('on', b.dataset.view === state.view);
 }
 
-function rankBadges(c) {
+function rankBadges(c, { venue = true } = {}) {
+  const g = c.grade || {};
   const out = [];
-  if (c.rank.ccf && c.rank.ccf !== 'N') out.push(`<span class="rank ${c.rank.ccf === 'A' ? 'top' : ''}">CCF ${esc(c.rank.ccf)}</span>`);
-  if (c.rank.core && c.rank.core !== 'N') out.push(`<span class="rank ${c.rank.core === 'A*' ? 'top' : ''}">CORE ${esc(c.rank.core)}</span>`);
+  if (g.bk) out.push(`<span class="rank bk${g.bk}" title="BK21 FOUR 인정 IF">BK ${g.bk}점</span>`);
+  if (g.kiise) out.push(`<span class="rank ${g.kiise === '최우수' ? 'top' : ''}" title="한국정보과학회 2024 우수학술대회">정보과학회 ${esc(g.kiise)}</span>`);
+  if (venue) out.push(venueBadge(c));
   return out.join('');
+}
+function venueBadge(c) {
+  return c.journal
+    ? `<span class="venue journal" title="논문이 ${esc(c.journal)} 저널에 실려요">저널형 · ${esc(c.journal)}</span>`
+    : '<span class="venue">컨퍼런스</span>';
 }
 
 function chipHtml(e, opt = {}) {
@@ -674,10 +706,13 @@ function renderSidebar() {
     </div>`;
   }).join('');
 
-  $('#rankFilters').innerHTML = [
-    `<button class="chip ${state.ranks.size === 0 ? 'on' : ''}" data-rank="">전체</button>`,
-    ...RANKS.map((r) => `<button class="chip ${state.ranks.has(r.id) ? 'on' : ''}" data-rank="${r.id}">${r.label}</button>`),
-  ].join('');
+  const gradeCount = (r) => state.conferences.filter((c) => r.test(c.grade || {})).length;
+  const chip = (r) => `<button class="chip ${state.ranks.has(r.id) ? 'on' : ''}" data-rank="${r.id}" title="${gradeCount(r)}개 학회">${r.label}</button>`;
+  $('#rankFilters').innerHTML = `
+    <div class="rank-row"><span class="rank-label">BK21</span>${RANKS.filter((r) => r.group === 'bk').map(chip).join('')}</div>
+    <div class="rank-row"><span class="rank-label">정보과학회</span>${RANKS.filter((r) => r.group === 'kiise').map(chip).join('')}
+      <button class="chip ${state.ranks.size === 0 ? 'on' : ''}" data-rank="">전체</button></div>
+    <div class="rank-src">BK21: 4단계 BK21 우수 국제학술대회 인정 IF · 정보과학회: 2024 우수학술대회</div>`;
 
   $('#typeFilters').innerHTML = TYPE_FILTERS.map((t) => {
     const on = t.types.every((x) => state.types.has(x));
@@ -784,7 +819,7 @@ function renderDrawer() {
         <button class="icon-btn" data-close title="닫기 (Esc)">${ICON.close}</button>
       </div>
       <p class="d-desc">${esc(c.description)}</p>
-      <div class="badges">${rankBadges(c)}${c.rank.thcpl && c.rank.thcpl !== 'N' ? `<span class="rank">THCPL ${esc(c.rank.thcpl)}</span>` : ''}</div>
+      <div class="badges">${rankBadges(c)}${!c.grade.bk && !c.grade.kiise ? '<span class="rank muted-rank">BK21·정보과학회 목록에 없음</span>' : ''}</div>
     </div>
     <div class="d-body" style="--c:${cat.color}">
       <div class="years">${years}</div>
@@ -841,6 +876,7 @@ function showTooltip(ev, x, y) {
   const note = ev.type === 'conf' ? (ev.ed.place || '') : (ev.t.comment || '');
   tip.innerHTML = `<div class="tt-title"><span style="width:8px;height:8px;border-radius:50%;background:${CATS[c.cat].color}"></span>${esc(c.title)} ${ev.ed.year}</div>
     <div class="tt-desc">${esc(c.description)}</div>
+    <div class="tt-badges">${rankBadges(c)}</div>
     <div class="tt-row"><span>${TYPES[ev.type].name}</span><b>${dd.text}</b></div>
     <div class="tt-row"><b>${when}</b></div>
     ${note ? `<div class="tt-row"><span>${esc(note)}</span></div>` : ''}`;
@@ -1443,6 +1479,25 @@ function bindUpdates() {
   };
   window.api.updateState().then(show).catch(() => {});
   window.api.onUpdate(show);
+  const btn = $('#checkUpdateBtn');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const label = btn.innerHTML;
+    btn.textContent = '확인 중…';
+    try {
+      const r = await window.api.checkUpdate();
+      if (r.status === 'dev') toast('개발 모드(npm start)에서는 업데이트를 확인하지 않아요.');
+      else if (r.status === 'latest') toast(`최신 버전이에요 (v${r.current})`);
+      else if (r.status === 'downloading') toast(`새 버전 v${r.version}을 받는 중이에요. 다 받으면 알려 드릴게요.`);
+      else if (r.status === 'ready') show(r);
+      else if (r.status === 'error') toast(`업데이트 확인 실패: ${r.message || '네트워크를 확인해 주세요'}`);
+    } catch (e) {
+      toast(`업데이트 확인 실패: ${cleanErr(e)}`);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = label;
+    }
+  });
   box.addEventListener('click', (e) => { if (e.target.closest('[data-install]')) window.api.installUpdate(); });
 }
 

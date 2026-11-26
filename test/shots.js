@@ -33,6 +33,13 @@ async function takeShots(win, dir) {
 
   await wait(3500);
   await shot('1-month');
+  report.grading = await js(`(() => {
+    const per = {};
+    for (const c of state.conferences) if (confMatches(c)) per[c.cat] = (per[c.cat] || 0) + 1;
+    const pick = (t) => { const c = state.conferences.find((x) => x.title === t); return c && [c.cat, c.grade.bk, c.grade.kiise, c.journal || '-', confMatches(c)]; };
+    return { visible: state.visibleConfCount, per, OSDI: pick('OSDI'), ICLR: pick('ICLR'), VLDB: pick('VLDB'), PLDI: pick('PLDI'), MLSys: pick('MLSys'), CVPR: pick('CVPR'), FAST: pick('FAST') };
+  })()`);
+  report.update = await js(`window.api.checkUpdate()`);
   report.extras = await js(`state.conferences.filter((c) => SYS_EXTRAS.includes(c.title)).map((c) => [c.title, confMatches(c)])`);
   report.extrasOff = await js(`(() => { state.sysExtras = false; const r = state.conferences.filter((c) => SYS_EXTRAS.includes(c.title)).map((c) => [c.title, confMatches(c)]); state.sysExtras = true; return r; })()`);
   report.wheel = await js(`(async () => {

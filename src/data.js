@@ -5,6 +5,16 @@ const yaml = require('js-yaml');
 
 const SOURCE_URL = 'https://ccfddl.github.io/conference/allconf.yml';
 
+// BK21 FOUR 인정 IF(1~4) + 한국정보과학회 2024 등급, DBLP 키 기준 (data/grades.json 참고)
+const GRADES = require('../data/grades.json').grades;
+
+// 논문이 저널(PACM 등)에 실리는 "저널형" 학회. DBLP 키 → 저널 이름
+const JOURNAL_FIRST = {
+  vldb: 'PVLDB', sigmod: 'PACMMOD', pods: 'PACMMOD', sigmetrics: 'POMACS', cscw: 'PACM HCI',
+  oopsla: 'PACMPL', popl: 'PACMPL', pldi: 'PACMPL', icfp: 'PACMPL', huc: 'IMWUT',
+  conext: 'PACMNET', sigsoft: 'PACMSE', siggraph: 'ACM TOG', siggrapha: 'ACM TOG',
+};
+
 const MONTH_NAMES = [
   'january', 'february', 'march', 'april', 'may', 'june',
   'july', 'august', 'september', 'october', 'november', 'december',
@@ -176,6 +186,11 @@ function normalize(yamlText) {
         thcpl: rank.thcpl ? String(rank.thcpl) : 'N',
       },
       dblp: c.dblp ? String(c.dblp) : '',
+      grade: (() => {
+        const g = GRADES[String(c.dblp || '')] || {};
+        return { bk: Number(g.bk) || 0, kiise: g.kiise || '' };
+      })(),
+      journal: JOURNAL_FIRST[String(c.dblp || '')] || '',
       editions: c.confs.map(normalizeEdition).sort((a, b) => (a.year || 0) - (b.year || 0)),
     });
   }

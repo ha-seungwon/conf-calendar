@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   updateState: () => ipcRenderer.invoke('update:state'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
   onUpdate: (cb) => {
     const handler = (_e, s) => cb(s);
     ipcRenderer.on('update:status', handler);
