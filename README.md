@@ -32,7 +32,7 @@
 
 단축키: `←` `→` 달 이동 · `T` 오늘 · `M` 월 보기 · `L` 목록 · `/` 검색 · `Esc` 닫기
 
-내 일정, 즐겨찾기, 설정은 `%APPDATA%\학회 캘린더\` (Mac: `~/Library/Application Support/학회 캘린더/`)에 저장돼서 업데이트해도 그대로 남습니다. **내 일정과 구글 로그인 정보·계정 이메일은 OS 암호화(Windows DPAPI / Mac 키체인)로 저장**돼서 이 PC의 이 사용자 계정에서만 열립니다.
+내 일정, 즐겨찾기, 설정은 `%APPDATA%\학회 캘린더\` (Mac: `~/Library/Application Support/ConfCalendar/`)에 저장돼서 업데이트해도 그대로 남습니다. **내 일정과 구글 로그인 정보·계정 이메일은 OS 암호화(Windows DPAPI / Mac 키체인)로 저장**돼서 이 PC의 이 사용자 계정에서만 열립니다.
 
 ## 새 버전 배포하기 (개발자용)
 
