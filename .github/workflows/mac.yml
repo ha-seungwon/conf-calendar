@@ -33,6 +33,9 @@ jobs:
       - run: npm ci
       - run: npm test
 
+      - name: Mac app name (Korean name crashes Electron on macOS)
+        run: node scripts/mac-prep.js
+
       - name: Build dmg (Apple Silicon + Intel)
         run: npx electron-builder --mac --publish never
 

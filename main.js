@@ -68,9 +68,12 @@ function showWindow() {
   win.focus();
 }
 
-function applyAutostart() {
+function applyAutostart(changed = false) {
   if (!app.isPackaged) return; // 개발 실행은 등록하지 않음
-  app.setLoginItemSettings({ openAtLogin: !!settings.autostart, openAsHidden: true, args: ['--hidden'] });
+  if (!settings.autostart && !changed) return; // 켠 적 없으면 건드리지 않음
+  try {
+    app.setLoginItemSettings({ openAtLogin: !!settings.autostart, openAsHidden: true, args: ['--hidden'] });
+  } catch { /* 일부 맥 환경에서 권한 없음 */ }
 }
 
 function updateTray() {
@@ -253,7 +256,7 @@ ipcMain.handle('settings:set', async (_e, next) => {
   if (next && typeof next.autostart === 'boolean') settings.autostart = next.autostart;
   await saveSettings();
   updateTray();
-  applyAutostart();
+  applyAutostart(next && typeof next.autostart === 'boolean');
   return { tray: settings.tray, autostart: settings.autostart, packaged: app.isPackaged, mac: IS_MAC };
 });
 ipcMain.handle('win:show', () => showWindow());
