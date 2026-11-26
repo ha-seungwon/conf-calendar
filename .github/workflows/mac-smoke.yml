@@ -9,6 +9,14 @@ on:
         description: 'Electron fuses 적용 (on/off) — 문제 원인 좁히기용'
         required: false
         default: 'on'
+      ascii_name:
+        description: '앱 이름을 영어(ConfCalendar)로 빌드 (on/off)'
+        required: false
+        default: 'off'
+      ref:
+        description: '점검할 브랜치·태그 (비우면 main)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -20,6 +28,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -31,6 +40,10 @@ jobs:
       - name: Turn fuses off (when asked)
         if: ${{ inputs.fuses == 'off' }}
         run: node -e "const f='package.json',p=JSON.parse(require('fs').readFileSync(f));delete p.build.electronFuses;require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
+
+      - name: English app name (when asked)
+        if: ${{ inputs.ascii_name == 'on' }}
+        run: node -e "const f='package.json',p=JSON.parse(require('fs').readFileSync(f));p.productName='ConfCalendar';p.build.productName='ConfCalendar';require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
 
       - name: Build app (Apple Silicon, no dmg)
         run: npx electron-builder --mac dir --arm64 --publish never
