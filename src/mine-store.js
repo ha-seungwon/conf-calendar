@@ -34,6 +34,7 @@ function cleanInput(m) {
     time: /^\d{2}:\d{2}$/.test(m.time || '') ? m.time : '',
     color: /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : '#ff6b3d',
     memo: str(m.memo, 5000),
+    plan: str(m.plan, 300), // 제출 계획으로 만든 일정이면 대상 마감 ID
     updatedAt: Number(m.updatedAt) || Date.now(),
   };
   if (!out.id || !out.title || !YMD.test(out.date)) return null;
@@ -57,7 +58,7 @@ function cleanStored(m) {
 // 화면으로 보내는 값
 const toView = (list) => list.filter((e) => !e.deleted).map((e) => ({
   id: e.id, title: e.title, date: e.date, endDate: e.endDate, time: e.time, color: e.color, memo: e.memo,
-  updatedAt: e.updatedAt, source: e.source, recurring: e.recurring, synced: !!e.gid,
+  updatedAt: e.updatedAt, source: e.source, recurring: e.recurring, synced: !!e.gid, plan: e.plan,
 }));
 
 /* ───── 파일 (동시에 쓰지 않도록 순서대로) ───── */

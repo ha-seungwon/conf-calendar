@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('app:notice', handler);
     return () => ipcRenderer.removeListener('app:notice', handler);
   },
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    set: (next) => ipcRenderer.invoke('settings:set', next),
+  },
+  showWindow: () => ipcRenderer.invoke('win:show'),
+  setTrayTip: (text) => ipcRenderer.invoke('tray:tip', text),
   updateState: () => ipcRenderer.invoke('update:state'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),

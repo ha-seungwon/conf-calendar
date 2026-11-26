@@ -1,11 +1,11 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, shell, dialog, net, nativeTheme, session } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, net, nativeTheme, session, Tray, Menu, nativeImage, Notification } = require('electron');
 const path = require('path');
 const { fileURLToPath } = require('url');
 
 /* ───── 보안: 앱 화면(renderer 폴더)에서 온 요청만 받는다 ───── */
-// 한글·공백이 들어간 경로(C:Users홍길동…)에서도 맞게, URL이 아니라 실제 경로로 비교한다
+// 한글·공백이 들어간 경로(예: 사용자 폴더 이름이 한글)에서도 맞게, URL이 아니라 실제 경로로 비교한다
 const norm = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
 const RENDERER_DIR = norm(path.join(__dirname, 'renderer') + path.sep);
 function isTrustedSender(e) {
@@ -42,13 +42,59 @@ const IS_MAC = process.platform === 'darwin';
 const RELEASES_URL = 'https://github.com/ha-seungwon/conf-calendar/releases/latest';
 
 // 스크린샷 점검 모드는 실제 사용자 설정을 건드리지 않도록 별도 폴더 사용
-if (process.env.CONFCAL_SHOT && !app.isPackaged) app.setPath('userData', path.resolve(process.env.CONFCAL_SHOT, 'userdata'));
+if (process.env.CONFCAL_SHOT && !app.isPackaged) {
+  app.setPath('userData', path.resolve(process.env.CONFCAL_SHOT, 'userdata'));
+  // 다른 창에 가려져도 화면을 계속 그려야 스크린샷이 최신 상태로 찍힌다
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+}
+
+/* ───── 백그라운드 실행 설정 (트레이·자동 실행) ───── */
+const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
+let settings = { tray: true, autostart: false, trayHintShown: false };
+let tray = null;
+let quitting = false;
+const START_HIDDEN = process.argv.includes('--hidden'); // 컴퓨터 켤 때 자동 실행된 경우
+
+async function loadSettings() {
+  try { settings = { ...settings, ...JSON.parse(await fs.readFile(settingsFile(), 'utf8')) }; } catch { /* 처음 실행 */ }
+}
+const saveSettings = () => fs.writeFile(settingsFile(), JSON.stringify(settings, null, 2), 'utf8').catch(() => {});
+
+function showWindow() {
+  if (!win || win.isDestroyed()) { createWindow(true); return; }
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function applyAutostart() {
+  if (!app.isPackaged) return; // 개발 실행은 등록하지 않음
+  app.setLoginItemSettings({ openAtLogin: !!settings.autostart, openAsHidden: true, args: ['--hidden'] });
+}
+
+function updateTray() {
+  if (settings.tray && !tray) {
+    const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png')).resize({ width: IS_MAC ? 18 : 16, quality: 'best' });
+    tray = new Tray(icon);
+    tray.setToolTip('학회 캘린더');
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: '학회 캘린더 열기', click: showWindow },
+      { type: 'separator' },
+      { label: '완전히 종료', click: () => { quitting = true; app.quit(); } },
+    ]));
+    tray.on('click', showWindow);
+  } else if (!settings.tray && tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
 
 function isHttpUrl(u) {
   try { return ['http:', 'https:'].includes(new URL(u).protocol); } catch { return false; }
 }
 
-function createWindow() {
+function createWindow(forceShow = false) {
   const dark = nativeTheme.shouldUseDarkColors;
   win = new BrowserWindow({
     width: 1480,
@@ -75,7 +121,22 @@ function createWindow() {
   });
   if (!IS_MAC) win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => { if (forceShow || !START_HIDDEN) win.show(); });
+
+  // 창을 닫으면 트레이로 숨겨서 마감 알림을 계속 받는다
+  win.on('close', (e) => {
+    if (!settings.tray || quitting) return;
+    e.preventDefault();
+    win.hide();
+    if (!settings.trayHintShown && Notification.isSupported()) {
+      new Notification({
+        title: '학회 캘린더가 계속 실행 중이에요',
+        body: `마감 알림을 받을 수 있게 ${IS_MAC ? '메뉴 막대' : '작업 표시줄 오른쪽(시계 옆)'}에 있어요. 완전히 끄려면 아이콘을 오른쪽 클릭 → 완전히 종료`,
+      }).show();
+      settings.trayHintShown = true;
+      saveSettings();
+    }
+  });
 
   if (process.env.CONFCAL_SHOT && !app.isPackaged) {
     win.webContents.once('did-finish-load', () => require('./test/shots')(win, process.env.CONFCAL_SHOT));
@@ -186,6 +247,18 @@ ipcMain.handle('link:open', (_e, url) => {
   return undefined;
 });
 
+ipcMain.handle('settings:get', () => ({ tray: !!settings.tray, autostart: !!settings.autostart, packaged: app.isPackaged, mac: IS_MAC }));
+ipcMain.handle('settings:set', async (_e, next) => {
+  if (next && typeof next.tray === 'boolean') settings.tray = next.tray;
+  if (next && typeof next.autostart === 'boolean') settings.autostart = next.autostart;
+  await saveSettings();
+  updateTray();
+  applyAutostart();
+  return { tray: settings.tray, autostart: settings.autostart, packaged: app.isPackaged, mac: IS_MAC };
+});
+ipcMain.handle('win:show', () => showWindow());
+ipcMain.handle('tray:tip', (_e, text) => { if (tray) tray.setToolTip(String(text || '학회 캘린더').slice(0, 120)); });
+
 ipcMain.handle('theme:set', (_e, mode) => {
   nativeTheme.themeSource = ['light', 'dark'].includes(mode) ? mode : 'system';
   const dark = nativeTheme.shouldUseDarkColors;
@@ -204,7 +277,13 @@ app.on('web-contents-created', (_e, wc) => {
   });
 });
 
-app.whenReady().then(() => {
+// 이미 실행 중이면(트레이에 있으면) 새로 띄우지 않고 그 창을 보여 준다
+if (app.isPackaged && !app.requestSingleInstanceLock()) app.quit();
+app.on('second-instance', () => showWindow());
+app.on('before-quit', () => { quitting = true; });
+
+app.whenReady().then(async () => {
+  await loadSettings();
   // 작업 표시줄 아이콘은 이 ID로 묶인다. 개발 실행(electron.exe)이 같은 ID를 쓰면 Windows가
   // Electron 기본 아이콘을 이 ID에 캐시해 버리므로, 개발용은 다른 ID를 쓴다.
   app.setAppUserModelId(app.isPackaged ? 'local.conf-calendar' : 'local.conf-calendar.dev');
@@ -215,7 +294,9 @@ app.whenReady().then(() => {
   createWindow();
   mineStore.setup(() => win);
   setupAutoUpdate();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  updateTray();
+  applyAutostart();
+  app.on('activate', () => showWindow());
 });
 
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('window-all-closed', () => { if (!IS_MAC && !settings.tray) app.quit(); });

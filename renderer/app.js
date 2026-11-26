@@ -222,6 +222,7 @@ const state = {
   starredOnly: !!prefs.starredOnly,
   etcOpen: !!prefs.etcOpen,
   sysExtras: prefs.sysExtras !== false,
+  alerts: { conf: prefs.alertConf !== false, mine: prefs.alertMine !== false },
   theme: ['light', 'dark'].includes(prefs.theme) ? prefs.theme : 'system',
   stars: new Set(store.get(STAR_KEY, [])),
   fetchedAt: null,
@@ -234,6 +235,7 @@ function savePrefs() {
   store.set(PREF_KEY, {
     view: state.view, subs: [...state.subs], crit: state.crit, tiers: Object.fromEntries(CRIT_KEYS.map((k) => [k, [...state.tiers[k]]])), types: [...state.types], typesV2: true, v12: true,
     starredOnly: state.starredOnly, etcOpen: state.etcOpen, sysExtras: state.sysExtras, theme: state.theme,
+    alertConf: state.alerts.conf, alertMine: state.alerts.mine,
   });
 }
 
@@ -329,6 +331,7 @@ function setMine(list) {
   state.myEvents = Array.isArray(list) ? list : [];
   buildMine();
   render();
+  if (state.drawer && !state.drawer.mode) renderDrawer(); // 열린 학회 상세의 계획 목록 갱신
 }
 
 async function persistMine(next) {
@@ -642,6 +645,9 @@ function renderUpcoming() {
     }
   }
   $('#upCount').textContent = ups.length ? `${ups.length >= 80 ? '80+' : ups.length}개` : '';
+  const next = ups.find((e) => e.type !== 'mine');
+  const tip = next ? `학회 캘린더 · 다음 마감: ${next.conf.title} ${next.ed.year} ${TYPES[next.type].tag} (${ddayInfo(next).text})` : '학회 캘린더';
+  if (tip !== state.trayTip) { state.trayTip = tip; window.api.setTrayTip(tip).catch(() => {}); }
 
   const hero = ups[0];
   if (!hero) {
@@ -861,6 +867,7 @@ function renderDrawer() {
         <h4>마감 일정 · ${TZ_LABEL} 기준</h4>
         ${tls}
       </section>
+      ${planSectionHtml(c, ed)}
       <section class="d-sec">
         <h4>학회 개최</h4>
         <div class="kv">${ICON.cal}<span style="flex:1">${dateLine}</span>${confDd ? `<span class="dd ${confDd.cls}">${confDd.text}</span>` : ''}</div>
@@ -868,6 +875,141 @@ function renderDrawer() {
       </section>
     </div>
     <div class="d-actions">${actions}</div>`;
+}
+
+/* ════════════════ 제출 계획 ════════════════ */
+// 마감에서 거꾸로 세어 준비 일정을 "내 일정"으로 만든다 (구글 캘린더 연동 중이면 구글에도 올라감)
+const PLAN_STEPS = [['주제·실험 계획 확정', 60], ['초안 완성', 30], ['내부 리뷰', 14], ['최종 점검·제출 준비', 3]];
+const planPrefix = (c, ed) => `${c.key}|${ed.id}|`;
+const planEvents = (c, ed) => state.mine.filter((e) => e.mine.plan && e.mine.plan.startsWith(planPrefix(c, ed)))
+  .sort((a, b) => a.d0 - b.d0 || a.at - b.at);
+const planTargets = (c, ed) => state.events.filter((e) => e.conf === c && e.ed === ed
+  && (e.type === 'deadline' || e.type === 'abstract') && e.at > Date.now());
+const stripPrefix = (t) => t.replace(/^\[[^\]]*\]\s*/, '');
+
+function planSectionHtml(c, ed) {
+  const evs = planEvents(c, ed);
+  const targets = planTargets(c, ed);
+  if (evs.length) {
+    const rows = evs.map((e) => {
+      const dd = ddayInfo(e);
+      return `<div class="plan-row ${isPast(e) ? 'past' : ''}" style="--c:${esc(e.mine.color)}" data-ev="${esc(e.id)}">
+        <span class="pdot"></span><span class="pd">${fmtDay(e.d0)}${e.mine.time ? ` ${esc(e.mine.time)}` : ''}</span>
+        <span class="pt">${esc(stripPrefix(e.mine.title))}</span><span class="dd ${dd.cls}">${dd.text}</span></div>`;
+    }).join('');
+    return `<section class="d-sec"><h4>내 제출 계획</h4><div class="plan-list">${rows}</div>
+      <div class="plan-btns">
+        ${targets.length ? '<button class="btn ghost small" data-plan-new>계획 다시 만들기</button>' : ''}
+        <button class="btn ghost small danger" data-plan-del>${ICON.trash}계획 지우기</button>
+      </div></section>`;
+  }
+  if (!targets.length) return '';
+  return `<section class="d-sec"><div class="plan-cta">
+      <div><b>📝 이 학회에 낼 계획인가요?</b><span>마감에서 거꾸로 주제 확정·초안·내부 리뷰·최종 점검 일정을 내 일정에 만들어 드려요.</span></div>
+      <button class="btn primary small" data-plan-new>제출 계획 만들기</button></div></section>`;
+}
+
+function openPlanEditor(c, ed) {
+  const targets = planTargets(c, ed);
+  if (!targets.length) { toast('이 회차는 남은 마감이 없어요.'); return; }
+  const main = targets.find((e) => e.type === 'deadline') || targets[0];
+  state.drawer = { mode: 'plan', key: c.key, edId: ed.id };
+  const color = CATS[c.cat].color;
+  const back = `data-plan-back="${esc(c.key)}" data-ed="${esc(ed.id)}"`;
+  const options = targets.map((e) => `<option value="${esc(e.id)}" ${e === main ? 'selected' : ''}>${TYPES[e.type].name} · ${fmtFull(e.at)} ${TZ_LABEL}${e.t.comment ? ` · ${esc(e.t.comment)}` : ''}</option>`).join('');
+  const steps = PLAN_STEPS.map(([name, days], i) => `<div class="plan-step">
+      <input type="checkbox" name="on${i}" checked aria-label="사용">
+      <input name="name${i}" value="${esc(name)}" maxlength="80" aria-label="일정 이름">
+      <span class="pre">D-</span><input name="days${i}" type="number" min="1" max="365" value="${days}" aria-label="며칠 전">
+    </div>`).join('');
+  $('#drawerPanel').innerHTML = `
+    <form id="planForm" class="mine-form" autocomplete="off">
+      <div class="d-head" style="--c:${color}">
+        <div class="d-cat"><span class="dot"></span>제출 계획</div>
+        <div class="d-titlerow"><h2>${esc(c.title)}<small>${ed.year}</small></h2>
+          <button type="button" class="icon-btn" ${back} title="학회 정보로 돌아가기">${ICON.close}</button></div>
+        <p class="d-desc">마감 며칠 전에 할지 정하면 내 일정에 추가돼요. 이미 지난 날짜는 건너뛰어요.</p>
+      </div>
+      <div class="d-body">
+        <label class="field"><span>기준 마감</span><select name="target">${options}</select></label>
+        <div class="field"><span>준비 일정</span><div class="plan-steps">${steps}</div></div>
+        <label class="check-row plain"><input type="checkbox" name="addDeadline" checked><span class="box"></span>
+          <span class="label">마감 시각도 내 일정에 추가<small>구글 캘린더와 연동 중이면 구글에도 마감이 올라가요</small></span></label>
+        <p class="form-error" hidden></p>
+      </div>
+      <div class="d-actions">
+        <button type="submit" class="btn primary">계획 만들기</button>
+        <button type="button" class="btn ghost" ${back}>취소</button>
+      </div>
+    </form>`;
+  const d = $('#drawer');
+  d.classList.add('open');
+  d.setAttribute('aria-hidden', 'false');
+}
+
+async function submitPlan(form) {
+  const { key, edId } = state.drawer;
+  const c = state.confByKey.get(key);
+  const ed = c.editions.find((x) => x.id === edId);
+  const target = state.byId.get(form.target.value);
+  const err = $('.form-error', form);
+  if (!target) { err.textContent = '기준 마감을 골라 주세요.'; err.hidden = false; return; }
+  const name = `${c.title} ${ed.year}`;
+  const color = CATS[c.cat].color;
+  const due = target.d0; // 마감이 내 PC 시간으로 떨어지는 날
+  const items = [];
+  let skipped = 0;
+  PLAN_STEPS.forEach((step, i) => {
+    if (!form[`on${i}`].checked) return;
+    const days = Math.max(1, Math.min(365, Number(form[`days${i}`].value) || step[1]));
+    const title = form[`name${i}`].value.trim() || step[0];
+    const day = due - days;
+    if (day < state.today) { skipped++; return; }
+    items.push({
+      title: `[${name}] ${title}`, date: ymdOfDay(day), time: '',
+      memo: `${TYPES[target.type].name} D-${days} · 마감 ${fmtFull(target.at)} ${TZ_LABEL}`,
+    });
+  });
+  if (form.addDeadline.checked) {
+    const d = new Date(target.at);
+    items.push({
+      title: `[${name}] ${TYPES[target.type].name}`, date: ymdOfDay(due), time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      memo: `원본 마감: ${target.t[`${target.type}Raw`] || ''} (${ed.timezone})${isHttp(ed.link) ? `\n${ed.link}` : ''}`,
+    });
+  }
+  if (!items.length) { err.textContent = '추가할 일정이 없어요. 남은 기간보다 짧은 날짜를 골라 주세요.'; err.hidden = false; return; }
+  const now = Date.now();
+  const fresh = items.map((it, i) => ({
+    id: `p${now.toString(36)}${i}${Math.random().toString(36).slice(2, 6)}`,
+    endDate: '', color, updatedAt: now, plan: target.id, ...it,
+  }));
+  const prefix = planPrefix(c, ed); // 같은 회차에 계획이 있으면 새 것으로 바꾼다
+  const next = state.myEvents.filter((m) => !(m.plan && m.plan.startsWith(prefix))).concat(fresh);
+  try {
+    await persistMine(next);
+  } catch (e) {
+    err.textContent = `저장하지 못했어요: ${cleanErr(e)}`; err.hidden = false; return;
+  }
+  toast(`${name} 제출 계획: 일정 ${fresh.length}개를 만들었어요${skipped ? ` (지난 날짜 ${skipped}개는 건너뜀)` : ''}`);
+  openDetail(c, ed);
+}
+
+async function deletePlan(btn) {
+  if (!btn.dataset.armed) {
+    btn.dataset.armed = '1';
+    btn.innerHTML = `${ICON.trash}한 번 더 누르면 삭제`;
+    setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.innerHTML = `${ICON.trash}계획 지우기`; } }, 3000);
+    return;
+  }
+  const c = state.confByKey.get(state.drawer.key);
+  const ed = c.editions.find((x) => x.id === state.drawer.edId);
+  const prefix = planPrefix(c, ed);
+  const removed = state.myEvents.filter((m) => m.plan && m.plan.startsWith(prefix));
+  await persistMine(state.myEvents.filter((m) => !(m.plan && m.plan.startsWith(prefix))));
+  renderDrawer();
+  toast(`계획 일정 ${removed.length}개를 지웠어요`, {
+    action: '되돌리기', ms: 6000, onAction: () => persistMine(state.myEvents.concat(removed)).then(renderDrawer),
+  });
 }
 
 /* ════════════════ 팝오버 · 툴팁 · 토스트 ════════════════ */
@@ -1030,22 +1172,54 @@ function exportEdition() {
   saveIcs(evs, `${c.title}-${ed.year}.ics`.replace(/\s+/g, '_'), `${c.title} ${ed.year}`);
 }
 
-/* ════════════════ 알림 (즐겨찾기 학회 3일 이내 마감) ════════════════ */
+/* ════════════════ 알림 ════════════════ */
+// 즐겨찾기 학회 마감: 7일·3일·1일·3시간 전 / 내 일정: 시간 있으면 30분 전, 하루 종일이면 그날 아침 9시
+const ALERT_STEPS = [[7 * DAY, '7일 전'], [3 * DAY, '3일 전'], [DAY, '1일 전'], [3 * 3600000, '3시간 전']];
+const MINE_LEAD = 30 * 60000;
+function notify(title, body, onClick) {
+  try {
+    const n = new Notification(title, { body });
+    n.onclick = () => { window.api.showWindow(); onClick(); };
+  } catch { /* 알림을 못 쓰는 환경 */ }
+}
 function notifyUpcoming() {
-  if (!('Notification' in window) || !state.stars.size) return;
+  if (!('Notification' in window)) return;
   const sent = new Set(store.get(NOTI_KEY, []));
   const now = Date.now();
-  const due = state.events.filter((e) => state.stars.has(e.conf.key)
-    && (e.type === 'deadline' || e.type === 'abstract')
-    && e.at > now && e.at - now <= 3 * DAY && !sent.has(e.id));
-  for (const e of due.slice(0, 3)) {
-    const n = new Notification(`마감 임박 · ${e.conf.title} ${e.ed.year}`, {
-      body: `${TYPES[e.type].name} ${fmtFull(e.at)} ${TZ_LABEL} (${remainText(e.at)})`,
-    });
-    n.onclick = () => openDetail(e.conf, e.ed, e.id);
-    sent.add(e.id);
+  let shown = 0;
+
+  if (state.alerts.conf) {
+    for (const e of state.events) {
+      if (shown >= 5) break;
+      if (!state.stars.has(e.conf.key) || (e.type !== 'deadline' && e.type !== 'abstract')) continue;
+      if (e.at <= now || e.at - now > ALERT_STEPS[0][0] + 60000) continue;
+      const crossed = ALERT_STEPS.filter(([lead]) => now >= e.at - lead);
+      if (!crossed.length) continue;
+      const keys = crossed.map(([lead]) => `${e.id}@${lead}`);
+      if (keys.every((k) => sent.has(k))) continue;
+      keys.forEach((k) => sent.add(k)); // 한꺼번에 여러 단계를 지났으면 가장 가까운 것 하나만
+      const label = crossed[crossed.length - 1][1];
+      notify(`마감 ${label} · ${e.conf.title} ${e.ed.year} ${TYPES[e.type].name}`,
+        `${fmtFull(e.at)} ${TZ_LABEL} · ${remainText(e.at)}`, () => openDetail(e.conf, e.ed, e.id));
+      shown++;
+    }
   }
-  store.set(NOTI_KEY, [...sent].slice(-300));
+
+  if (state.alerts.mine) {
+    for (const e of state.mine) {
+      if (shown >= 8) break;
+      const m = e.mine;
+      const p = partsOfDay(e.d0);
+      const fireAt = m.time ? e.at - MINE_LEAD : new Date(p.y, p.m, p.d, 9, 0).getTime();
+      const key = `${e.id}@${m.date}T${m.time}`; // 날짜·시간을 바꾸면 다시 알림
+      if (now < fireAt || now > fireAt + 6 * 3600000 || sent.has(key)) continue;
+      sent.add(key);
+      notify(m.time ? `30분 뒤 · ${m.title}` : `오늘 · ${m.title}`,
+        `${mineWhen(m)}${m.memo ? ` · ${m.memo.split('\n')[0].slice(0, 80)}` : ''}`, () => openMineEditor(m));
+      shown++;
+    }
+  }
+  store.set(NOTI_KEY, [...sent].slice(-2000));
 }
 
 /* ════════════════ 동작 ════════════════ */
@@ -1134,6 +1308,7 @@ function jumpTo(ev) {
   }
 }
 function toggleStar(key) {
+  setTimeout(renderAlerts, 0);
   if (state.stars.has(key)) state.stars.delete(key); else state.stars.add(key);
   store.set(STAR_KEY, [...state.stars]);
   render();
@@ -1233,6 +1408,7 @@ function bindUI() {
     e.preventDefault();
     if (e.target.id === 'mineForm') submitMine(e.target);
     else if (e.target.id === 'googleForm') submitGoogle(e.target);
+    else if (e.target.id === 'planForm') submitPlan(e.target);
   });
   $('#drawer').addEventListener('input', (e) => {
     // 색을 고르면 머리 색도 바로 바뀌게
@@ -1249,7 +1425,19 @@ function bindUI() {
     if (e.target.closest('[data-star]')) { toggleStar(state.drawer.key); return; }
     const open = e.target.closest('[data-open]');
     if (open) { window.api.openLink(open.dataset.open); return; }
-    if (e.target.closest('[data-ics-ed]')) exportEdition();
+    if (e.target.closest('[data-ics-ed]')) { exportEdition(); return; }
+    if (e.target.closest('[data-plan-new]')) {
+      const c = state.confByKey.get(state.drawer.key);
+      openPlanEditor(c, c.editions.find((x) => x.id === state.drawer.edId));
+      return;
+    }
+    const pd = e.target.closest('[data-plan-del]');
+    if (pd) { deletePlan(pd); return; }
+    const back = e.target.closest('[data-plan-back]');
+    if (back) {
+      const c = state.confByKey.get(back.dataset.planBack);
+      if (c) openDetail(c, c.editions.find((x) => x.id === back.dataset.ed));
+    }
   });
 
   // 일정 클릭 → 상세 / 날짜 클릭 → 그날 일정
@@ -1320,12 +1508,18 @@ function bindUI() {
 let tickCount = 0;
 function tick() {
   const t = todayNum();
+  if (document.hidden) { // 트레이에 숨어 있을 때는 알림만 확인
+    if (Date.now() - lastAlertCheck >= 60000) { lastAlertCheck = Date.now(); notifyUpcoming(); }
+    if (t !== state.today) state.today = t;
+    return;
+  }
   if (t !== state.today) { state.today = t; render(); renderDrawer(); return; }
   updateClock();
   tickCount++;
   if (tickCount % 60 === 0) { renderStatus(); renderDrawer(); }
-  if (tickCount % 1800 === 0) notifyUpcoming();
+  if (Date.now() - lastAlertCheck >= 60000) { lastAlertCheck = Date.now(); notifyUpcoming(); }
 }
+let lastAlertCheck = 0;
 
 /* ════════════════ 구글 캘린더 연동 ════════════════ */
 const GOOGLE_STEPS = [
@@ -1457,6 +1651,36 @@ function bindGoogle() {
   setInterval(renderGoogle, 60000); // "n분 전" 갱신
 }
 
+/* ════════════════ 알림 · 백그라운드 설정 ════════════════ */
+state.bg = { tray: true, autostart: false, packaged: false, mac: false };
+function renderAlerts() {
+  const row = (attr, key, on, label, sub, disabled) => `<label class="check-row ${disabled ? 'disabled' : ''}">
+      <input type="checkbox" ${attr}="${key}" ${on ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+      <span class="box"></span><span class="label">${label}${sub ? `<small>${sub}</small>` : ''}</span></label>`;
+  const noStars = state.alerts.conf && !state.stars.size;
+  $('#alertBox').innerHTML = [
+    row('data-alert', 'conf', state.alerts.conf, '★ 학회 마감 알림', noStars ? '즐겨찾기(★)한 학회만 알려요. 학회를 눌러 ☆를 켜 보세요' : '7일·3일·1일·3시간 전'),
+    row('data-alert', 'mine', state.alerts.mine, '내 일정 알림', '30분 전 · 하루 종일 일정은 아침 9시'),
+    row('data-bg', 'tray', state.bg.tray, '창을 닫아도 계속 실행', state.bg.mac ? '메뉴 막대에서 알림을 계속 받아요' : '시계 옆 트레이에서 알림을 계속 받아요'),
+    row('data-bg', 'autostart', state.bg.autostart, '컴퓨터 켤 때 자동 실행', state.bg.packaged ? '창 없이 조용히 시작해요' : '설치된 앱에서만 쓸 수 있어요', !state.bg.packaged),
+  ].join('');
+}
+function bindAlerts() {
+  window.api.settings.get().then((s) => { state.bg = s; renderAlerts(); }).catch(() => renderAlerts());
+  $('#alertBox').addEventListener('change', async (e) => {
+    const t = e.target;
+    if (t.dataset.alert) {
+      state.alerts[t.dataset.alert] = t.checked;
+      savePrefs();
+      if (t.checked) notifyUpcoming();
+      renderAlerts();
+    } else if (t.dataset.bg) {
+      try { state.bg = await window.api.settings.set({ [t.dataset.bg]: t.checked }); } catch (err) { toast(cleanErr(err)); }
+      renderAlerts();
+    }
+  });
+}
+
 /* ════════════════ 피드백 (GitHub Issues) ════════════════ */
 const REPO_URL = 'https://github.com/ha-seungwon/conf-calendar';
 function openFeedback() {
@@ -1549,6 +1773,7 @@ async function init() {
   bindUI();
   bindUpdates();
   bindGoogle();
+  bindAlerts();
   $('#feedbackBtn').addEventListener('click', openFeedback);
   try { state.myEvents = await window.api.loadMine(); } catch { state.myEvents = []; }
   window.api.onMineChanged((list) => setMine(list)); // 구글에서 바뀐 일정

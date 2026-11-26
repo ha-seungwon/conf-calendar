@@ -104,6 +104,35 @@ async function takeShots(win, dir) {
   await js(`document.querySelector('[data-mine-delete]').click(); document.querySelector('[data-mine-delete]').click();`);
   await wait(500);
   report.mineAfterDelete = await js(`state.myEvents.map((m) => m.title)`);
+  // 알림: Notification 을 가로채서 무엇이 뜨는지 기록
+  report.alerts = await js(`(async () => {
+    window.__n = [];
+    window.Notification = class { constructor(t, o) { window.__n.push(t + ' | ' + (o && o.body)); } };
+    state.stars.add('SE/osdi');
+    store.set(NOTI_KEY, []);
+    notifyUpcoming();
+    const first = window.__n.slice();
+    notifyUpcoming(); // 두 번 불러도 중복 없음
+    const second = window.__n.length - first.length;
+    // 20분 뒤 시작하는 내 일정 → "30분 뒤" 알림
+    const t = new Date(Date.now() + 20 * 60000);
+    const hh = String(t.getHours()).padStart(2, '0'), mm = String(t.getMinutes()).padStart(2, '0');
+    await persistMine(state.myEvents.concat({ id: 'soon1', title: '랩 미팅', date: ymdOfDay(dayNumOfDate(t)), endDate: '', time: hh + ':' + mm, color: '#6d5dfc', memo: '', updatedAt: Date.now() }));
+    notifyUpcoming();
+    return { first, duplicates: second, mine: window.__n.slice(first.length) };
+  })()`);
+  report.settings = await js(`window.api.settings.get()`);
+  report.trayTip = await js(`state.trayTip`);
+  // 제출 계획
+  await js(`(() => { const c = state.confByKey.get('SE/osdi'); openDetail(c, c.editions.find((e) => e.year === 2027)); })()`);
+  await shot('12-plan-cta');
+  await js(`document.querySelector('[data-plan-new]').click()`);
+  await shot('13-plan-editor');
+  await js(`document.querySelector('#planForm').requestSubmit()`);
+  await wait(800);
+  await shot('14-plan-done');
+  report.plan = await js(`state.myEvents.filter((m) => m.plan).map((m) => m.date + ' ' + (m.time || '종일') + ' ' + m.title)`);
+  await js(`closeDrawer()`);
   report.google = await js(`window.api.google.status()`);
   await js(`document.querySelector('[data-g="setup"]').click()`);
   await shot('9-google-setup');
