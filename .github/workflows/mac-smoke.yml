@@ -1,0 +1,53 @@
+# 맥에서 앱이 실제로 켜지는지 점검 (배포 전 확인·문제 추적용)
+# Actions → "macOS smoke test" → Run workflow
+name: macOS smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      fuses:
+        description: 'Electron fuses 적용 (on/off) — 문제 원인 좁히기용'
+        required: false
+        default: 'on'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Turn fuses off (when asked)
+        if: ${{ inputs.fuses == 'off' }}
+        run: node -e "const f='package.json',p=JSON.parse(require('fs').readFileSync(f));delete p.build.electronFuses;require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
+
+      - name: Build app (Apple Silicon, no dmg)
+        run: npx electron-builder --mac dir --arm64 --publish never
+
+      - name: Launch for 20 seconds
+        run: |
+          APP=$(ls -d release/mac-arm64/*.app | head -1)
+          BIN="$APP/Contents/MacOS/$(defaults read "$PWD/$APP/Contents/Info" CFBundleExecutable)"
+          echo "binary: $BIN"
+          codesign -dv --verbose=2 "$APP" 2>&1 | head -8 || true
+          npx @electron/fuses read --app "$APP" || true
+          ELECTRON_ENABLE_LOGGING=1 "$BIN" --enable-logging=stderr > run.log 2>&1 &
+          PID=$!
+          sleep 20
+          if kill -0 $PID 2>/dev/null; then echo "RESULT: still running after 20s (OK)"; kill $PID; else wait $PID; echo "RESULT: exited early, code $?"; fi
+          echo "----- app log -----"; tail -80 run.log
+          echo "----- crash reports -----"
+          ls -t ~/Library/Logs/DiagnosticReports/ 2>/dev/null | head -5
+          f=$(ls -t ~/Library/Logs/DiagnosticReports/*.ips 2>/dev/null | head -1)
+          if [ -n "$f" ]; then head -c 6000 "$f"; fi
