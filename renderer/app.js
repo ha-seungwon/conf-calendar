@@ -1500,6 +1500,11 @@ function bindUpdates() {
     if (s.status === 'downloading') {
       box.hidden = false;
       box.innerHTML = `<span>새 버전 v${esc(s.version || '')} 받는 중… ${Number(s.percent) || 0}%</span>`;
+    } else if (s.status === 'manual') {
+      // 맥: 직접 받아서 설치
+      box.hidden = false;
+      box.innerHTML = `<span>새 버전 <b>v${esc(s.version || '')}</b>이 나왔어요</span>
+        <button class="btn primary small" data-install>다운로드 페이지 열기</button>`;
     } else if (s.status === 'ready') {
       box.hidden = false;
       box.innerHTML = `<span><b>v${esc(s.version || '')}</b> 업데이트 준비 완료</span>
@@ -1526,7 +1531,7 @@ function bindUpdates() {
       if (r.status === 'dev') toast('개발 모드(npm start)에서는 업데이트를 확인하지 않아요.');
       else if (r.status === 'latest') toast(`최신 버전이에요 (v${r.current})`);
       else if (r.status === 'downloading') toast(`새 버전 v${r.version}을 받는 중이에요. 다 받으면 알려 드릴게요.`);
-      else if (r.status === 'ready') show(r);
+      else if (r.status === 'ready' || r.status === 'manual') show(r);
       else if (r.status === 'error') toast(`업데이트 확인 실패: ${r.message || '네트워크를 확인해 주세요'}`);
     } catch (e) {
       toast(`업데이트 확인 실패: ${cleanErr(e)}`);
@@ -1539,6 +1544,7 @@ function bindUpdates() {
 }
 
 async function init() {
+  if (window.api.platform === 'darwin') document.documentElement.classList.add('mac');
   applyTheme();
   bindUI();
   bindUpdates();

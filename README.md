@@ -1,11 +1,13 @@
 # 학회 캘린더
 
-시스템·AI 학회의 **논문/초록 마감일**과 **개최 기간**을 웹에서 받아 캘린더로 보여 주고, **내 일정**도 함께 관리하는 Windows 데스크톱 앱 (Electron).
+시스템·AI 학회의 **논문/초록 마감일**과 **개최 기간**을 웹에서 받아 캘린더로 보여 주고, **내 일정**도 함께 관리하는 Windows · Mac 데스크톱 앱 (Electron).
 
-**다운로드: https://ha-seungwon.github.io/conf-calendar** (또는 [Releases](https://github.com/ha-seungwon/conf-calendar/releases/latest)에서 `ConfCalendar-Setup.exe`)
+**다운로드: https://ha-seungwon.github.io/conf-calendar** (또는 [Releases](https://github.com/ha-seungwon/conf-calendar/releases/latest)에서 Windows `ConfCalendar-Setup.exe`, Mac `ConfCalendar-arm64.dmg`(Apple 칩) / `ConfCalendar-x64.dmg`(Intel))
 
 설치하면 바탕화면과 시작 메뉴에 "학회 캘린더" 바로가기가 생기고, 새 버전이 나오면 자동으로 업데이트됩니다.
 처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 "추가 정보 → 실행"을 누르세요 (코드 서명이 없어서 나오는 안내).
+
+**Mac**: .dmg를 열어 앱을 "응용 프로그램"으로 옮긴 뒤 실행 → 경고가 뜨면 "시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기". 애플 개발자 서명이 없어서 Mac은 자동 설치가 안 되고, 새 버전이 나오면 앱에서 알려 주고 다운로드 페이지를 열어 줍니다.
 
 ## 기능
 
@@ -37,7 +39,7 @@ npm version patch    # 1.0.0 → 1.0.1 (기능 추가면 minor), 커밋과 태�
 npm run release      # 설치 파일 빌드 → git push → GitHub Release 업로드
 ```
 
-Release가 올라가면 이미 설치된 앱들이 다음 실행 때(켜 둔 상태면 6시간 안에) 알아서 새 버전을 받습니다.
+Release가 올라가면 GitHub Actions(`.github/workflows/mac.yml`)가 맥 서버에서 .dmg를 만들어 같은 릴리스에 붙이고(약 10분), 이미 설치된 앱들이 다음 실행 때(켜 둔 상태면 6시간 안에) 알아서 새 버전을 받습니다.
 필요한 것: [GitHub CLI](https://cli.github.com) 로그인(`gh auth login`), 커밋하지 않은 변경 없음, 실행 중인 앱 닫기.
 
 ## 개발

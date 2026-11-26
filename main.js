@@ -17,6 +17,8 @@ const THEME = {
 };
 
 let win;
+const IS_MAC = process.platform === 'darwin';
+const RELEASES_URL = 'https://github.com/ha-seungwon/conf-calendar/releases/latest';
 
 // 스크린샷 점검 모드는 실제 사용자 설정을 건드리지 않도록 별도 폴더 사용
 if (process.env.CONFCAL_SHOT && !app.isPackaged) app.setPath('userData', path.resolve(process.env.CONFCAL_SHOT, 'userdata'));
@@ -35,7 +37,9 @@ function createWindow() {
     title: '학회 캘린더',
     backgroundColor: dark ? THEME.dark.color : THEME.light.color,
     titleBarStyle: 'hidden',
-    titleBarOverlay: { ...(dark ? THEME.dark : THEME.light), height: 52 },
+    ...(IS_MAC
+      ? { trafficLightPosition: { x: 18, y: 18 } } // 맥: 왼쪽 위 신호등 버튼
+      : { titleBarOverlay: { ...(dark ? THEME.dark : THEME.light), height: 52 } }),
     icon: path.join(__dirname, 'build', 'icon.png'),
     show: false,
     webPreferences: {
@@ -46,7 +50,7 @@ function createWindow() {
       spellcheck: false,
     },
   });
-  win.setMenuBarVisibility(false);
+  if (!IS_MAC) win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => win.show());
 
@@ -108,9 +112,12 @@ function setupAutoUpdate() {
   if (!app.isPackaged) return; // 개발 실행(npm start)에서는 끔
   let autoUpdater;
   try { ({ autoUpdater } = require('electron-updater')); } catch { return; }
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.on('update-available', (i) => sendUpdate({ status: 'downloading', version: i.version, percent: 0 }));
+  // 맥은 애플 개발자 서명이 없으면 자동 설치가 안 돼서, 새 버전을 알려 주고 다운로드 페이지를 연다
+  autoUpdater.autoDownload = !IS_MAC;
+  autoUpdater.autoInstallOnAppQuit = !IS_MAC;
+  autoUpdater.on('update-available', (i) => sendUpdate(IS_MAC
+    ? { status: 'manual', version: i.version, url: RELEASES_URL }
+    : { status: 'downloading', version: i.version, percent: 0 }));
   autoUpdater.on('download-progress', (p) => sendUpdate({ status: 'downloading', percent: Math.round(p.percent || 0) }));
   autoUpdater.on('update-downloaded', (i) => sendUpdate({ status: 'ready', version: i.version }));
   autoUpdater.on('update-not-available', () => sendUpdate({ status: 'latest' }));
@@ -118,7 +125,10 @@ function setupAutoUpdate() {
   const check = () => autoUpdater.checkForUpdates().catch(() => {});
   setTimeout(check, 5000);
   setInterval(check, 6 * 3600000);
-  ipcMain.handle('update:install', () => { autoUpdater.quitAndInstall(false, true); });
+  ipcMain.handle('update:install', () => {
+    if (IS_MAC) return shell.openExternal(RELEASES_URL);
+    return autoUpdater.quitAndInstall(false, true);
+  });
   checkNow = async () => {
     sendUpdate({ status: 'checking' });
     try {

@@ -38,6 +38,10 @@
       box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 40%, transparent); transition: transform .15s, background .15s;
     }
     .dl:hover { background: var(--accent-2); transform: translateY(-2px); }
+    .dls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .dl.alt { background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    .dl.alt:hover { background: var(--surface); border-color: var(--accent); }
+    .note + .note { margin-top: 10px; }
     .dl svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .meta { margin-top: 12px; font-size: 13px; color: var(--muted); }
     .shot { margin: 30px auto 0; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
@@ -64,10 +68,18 @@
     <section class="hero">
       <h1>시스템 · AI 학회 마감,<br><span>한눈에 보는 캘린더</span></h1>
       <p>OSDI, SOSP, NeurIPS, ICML 등 387개 학회의 논문 마감과 개최일을 자동으로 받아 오고, 내 일정까지 함께 관리하세요.</p>
-      <a class="dl" href="https://github.com/ha-seungwon/conf-calendar/releases/latest/download/ConfCalendar-Setup.exe">
-        <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Windows용 다운로드
-      </a>
-      <div class="meta">Windows 10 / 11 · 무료 · 설치하면 바탕화면에 바로가기가 생겨요</div>
+      <div class="dls">
+        <a class="dl" id="dlWin" href="https://github.com/ha-seungwon/conf-calendar/releases/latest/download/ConfCalendar-Setup.exe">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Windows용 다운로드
+        </a>
+        <a class="dl alt" id="dlMac" href="https://github.com/ha-seungwon/conf-calendar/releases/latest/download/ConfCalendar-arm64.dmg">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Mac용 (Apple 칩 M1~)
+        </a>
+        <a class="dl alt" href="https://github.com/ha-seungwon/conf-calendar/releases/latest/download/ConfCalendar-x64.dmg">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Mac용 (Intel)
+        </a>
+      </div>
+      <div class="meta">Windows 10 / 11 · macOS 12 이상 · 무료 · 내 Mac의 칩은 왼쪽 위 Apple 메뉴 → "이 Mac에 관하여"에서 볼 수 있어요</div>
       <div class="shot">
         <img class="light" src="screenshot.png" alt="학회 캘린더 월 보기 화면">
         <img class="dark" src="screenshot-dark.png" alt="학회 캘린더 다크 테마 화면">
@@ -80,9 +92,15 @@
       <div class="f"><b>🔎 BK21 점수 · 정보과학회 등급</b><span>BK 4~1점, 정보과학회 최우수·우수와 세부 분야(머신러닝·비전·OS·아키텍처…)로 거르고, 관심 학회는 ★로 고정해요.</span></div>
       <div class="f"><b>📤 구글 · 아웃룩으로 내보내기</b><span>보이는 일정을 .ics 파일로 저장해 다른 캘린더에 넣을 수 있어요.</span></div>
       <div class="f"><b>🔄 자동 업데이트</b><span>새 버전이 나오면 앱이 알아서 받아 두고, 다시 켤 때 설치돼요.</span></div>
-      <div class="f"><b>🌙 라이트 · 다크</b><span>Windows 테마를 따라가고, 오프라인에서도 마지막 데이터로 동작해요.</span></div>
+      <div class="f"><b>🌙 라이트 · 다크</b><span>Windows·Mac 테마를 따라가고, 오프라인에서도 마지막 데이터로 동작해요.</span></div>
     </section>
 
+    <div class="note">
+      <b>Mac에서 처음 열 때 "확인되지 않은 개발자" 경고가 뜨면</b>
+      .dmg를 열어 앱을 "응용 프로그램" 폴더로 끌어 놓은 뒤, 앱을 한 번 실행해 경고를 닫고
+      <b>시스템 설정 → 개인정보 보호 및 보안</b> 맨 아래의 <b>"그래도 열기"</b>를 누르세요.
+      (애플 개발자 서명이 없는 개인 프로젝트라서 나오는 안내예요.) Mac은 자동 설치 대신, 새 버전이 나오면 앱이 알려 주고 이 페이지에서 받아요.
+    </div>
     <div class="note">
       <b>처음 실행할 때 파란 "Windows의 PC 보호" 창이 뜨면</b> "추가 정보" → "실행"을 누르세요.
       코드 서명 인증서가 없는 개인 프로젝트라서 나오는 안내예요.
@@ -96,5 +114,12 @@
       <a href="https://github.com/ha-seungwon/conf-calendar/issues?q=label%3Afeedback">피드백</a>
     </footer>
   </div>
+  <script>
+    // Mac에서 열면 Mac 버튼을 앞으로
+    if (/Mac/.test(navigator.platform || navigator.userAgent)) {
+      const mac = document.getElementById('dlMac'), win = document.getElementById('dlWin');
+      mac.classList.remove('alt'); win.classList.add('alt'); mac.parentNode.prepend(mac);
+    }
+  </script>
 </body>
 </html>

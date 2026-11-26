@@ -3,6 +3,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  platform: process.platform,
   loadData: () => ipcRenderer.invoke('data:load'),
   refreshData: () => ipcRenderer.invoke('data:refresh'),
   saveIcs: (defaultName, content) => ipcRenderer.invoke('file:save-ics', { defaultName, content }),
