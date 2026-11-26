@@ -17,6 +17,10 @@ on:
         description: '점검할 브랜치·태그 (비우면 main)'
         required: false
         default: ''
+      release:
+        description: '빌드 대신 이 릴리스에 올라간 맥 파일을 받아서 점검 (예: v1.7.1)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -36,17 +40,28 @@ jobs:
           cache: npm
 
       - run: npm ci
+        if: ${{ inputs.release == '' }}
 
       - name: Turn fuses off (when asked)
-        if: ${{ inputs.fuses == 'off' }}
+        if: ${{ inputs.release == '' && inputs.fuses == 'off' }}
         run: node -e "const f='package.json',p=JSON.parse(require('fs').readFileSync(f));delete p.build.electronFuses;require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
 
       - name: English app name (when asked)
-        if: ${{ inputs.ascii_name == 'on' }}
+        if: ${{ inputs.release == '' && inputs.ascii_name == 'on' }}
         run: node scripts/mac-prep.js
 
       - name: Build app (Apple Silicon, no dmg)
+        if: ${{ inputs.release == '' }}
         run: npx electron-builder --mac dir --arm64 --publish never
+
+      - name: Download released Mac app instead
+        if: ${{ inputs.release != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.release }}" --pattern 'ConfCalendar-mac-arm64.zip' --dir dl
+          mkdir -p release/mac-arm64 && ditto -x -k dl/ConfCalendar-mac-arm64.zip release/mac-arm64
+          ls release/mac-arm64
 
       - name: Launch for 20 seconds
         run: |
