@@ -70,3 +70,10 @@ test/              파서·동기화 테스트, 화면 점검용 자동 스크�
 학회 데이터: [ccfddl/ccf-deadlines](https://github.com/ccfddl/ccf-deadlines) (MIT, 커뮤니티 관리).
 등급: `data/grades.json` — 4단계 BK21 Computer Science 분야 우수 국제학술대회 목록의 인정 IF, 한국정보과학회 2024 우수학술대회 등급([비교표](https://gist.github.com/Pusnow/6eb933355b5cb8d31ef1abcb3c3e1206) 기준, BK 점수는 BK21 목록 PDF와 대조). 마감일은 바뀔 수 있으니 제출 전에는 학회 웹사이트에서 꼭 다시 확인하세요.
 글꼴: Pretendard (SIL OFL 1.1, `renderer/fonts/PRETENDARD-LICENSE.txt`). 이 앱: MIT.
+
+## 보안
+
+- **앱**: 화면 코드는 격리·샌드박스로 실행되고 외부 스크립트·네트워크 접근이 막혀 있음. 배포판은 개발자 도구가 꺼져 있고, Electron fuses로 실행 파일을 Node로 쓰거나 디버거를 붙이거나 앱 파일(asar)을 바꿔치기하는 것을 막음. 앱 내부 요청(IPC)은 앱 화면에서 온 것만 처리하고, 권한은 알림만 허용
+- **개인 정보**: 내 일정·구글 로그인 정보·계정 이메일은 OS 암호화(Windows DPAPI / Mac 키체인)로 저장. 서버가 없어서 다른 사람에게 전송되지 않음
+- **배포**: main 브랜치·릴리스 태그는 강제 푸시·삭제·변경 금지(Rulesets), Actions 기본 권한은 읽기 전용, 외부 기여자 PR 워크플로는 승인 필요, 비밀 정보 스캔·푸시 차단 켜짐, 워크플로 액션은 커밋 SHA로 고정. 업데이트 파일은 SHA-512로 검증
+- **남은 과제**: 코드 서명 인증서 없음(Windows SmartScreen·Mac Gatekeeper 경고). 저장소 관리자 계정은 반드시 2단계 인증 사용

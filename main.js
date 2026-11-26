@@ -1,7 +1,28 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, shell, dialog, net, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, net, nativeTheme, session } = require('electron');
 const path = require('path');
+const { fileURLToPath } = require('url');
+
+/* ───── 보안: 앱 화면(renderer 폴더)에서 온 요청만 받는다 ───── */
+// 한글·공백이 들어간 경로(C:Users홍길동…)에서도 맞게, URL이 아니라 실제 경로로 비교한다
+const norm = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+const RENDERER_DIR = norm(path.join(__dirname, 'renderer') + path.sep);
+function isTrustedSender(e) {
+  try {
+    const url = e && e.senderFrame && e.senderFrame.url;
+    if (typeof url !== 'string' || !url.startsWith('file:')) return false;
+    return norm(fileURLToPath(url)).startsWith(RENDERER_DIR);
+  } catch {
+    return false;
+  }
+}
+// 이후 등록되는 모든 IPC 핸들러에 발신자 검사를 씌운다
+const rawHandle = ipcMain.handle.bind(ipcMain);
+ipcMain.handle = (channel, fn) => rawHandle(channel, (e, ...args) => {
+  if (!isTrustedSender(e)) throw new Error('허용되지 않은 요청이에요.');
+  return fn(e, ...args);
+});
 const fs = require('fs/promises');
 const { SOURCE_URL, normalize } = require('./src/data');
 const mineStore = require('./src/mine-store');
@@ -48,6 +69,8 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
+      devTools: !app.isPackaged, // 배포판에서는 개발자 도구를 열 수 없게
+      webviewTag: false,
     },
   });
   if (!IS_MAC) win.setMenuBarVisibility(false);
@@ -172,8 +195,21 @@ ipcMain.handle('theme:set', (_e, mode) => {
   return dark;
 });
 
+// 새 창·webview·다른 페이지로 이동은 전부 막는다
+app.on('web-contents-created', (_e, wc) => {
+  wc.on('will-attach-webview', (ev) => ev.preventDefault());
+  wc.setWindowOpenHandler(({ url }) => {
+    if (isHttpUrl(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+});
+
 app.whenReady().then(() => {
   app.setAppUserModelId('local.conf-calendar');
+  // 카메라·마이크·위치 등 권한은 거절하고, 마감 알림(notifications)만 허용
+  const allow = new Set(['notifications']);
+  session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(allow.has(perm)));
+  session.defaultSession.setPermissionCheckHandler((_wc, perm) => allow.has(perm));
   createWindow();
   mineStore.setup(() => win);
   setupAutoUpdate();

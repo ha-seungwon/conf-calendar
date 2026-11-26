@@ -85,6 +85,14 @@
     "dmg": {
       "artifactName": "ConfCalendar-${arch}.${ext}",
       "title": "학회 캘린더"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "enableCookieEncryption": true
     }
   }
 }
