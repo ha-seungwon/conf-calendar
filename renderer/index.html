@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'">
+  <title>학회 캘린더</title>
+  <link rel="stylesheet" href="fonts/pretendard.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#3b82f6"/>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="30" height="30" rx="9" fill="url(#lg)"/>
+        <rect x="8" y="9.5" width="16" height="14" rx="3" fill="none" stroke="#fff" stroke-width="2"/>
+        <path d="M8 14h16M12.5 7.5v4M19.5 7.5v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="16" cy="18.6" r="2" fill="#fff"/>
+      </svg>
+      <span class="brand-name">학회 캘린더</span>
+    </div>
+
+    <div class="nav">
+      <button id="prevBtn" class="icon-btn" title="이전 달 (← 또는 마우스 휠 위로)" aria-label="이전 달">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button id="todayBtn" class="btn ghost" title="오늘 (T)">오늘</button>
+      <button id="nextBtn" class="icon-btn" title="다음 달 (→ 또는 마우스 휠 아래로)" aria-label="다음 달">
+        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <h1 id="period" class="period"></h1>
+    </div>
+
+    <div class="drag-spacer"></div>
+
+    <div class="seg" id="viewSeg" role="tablist">
+      <button data-view="month" role="tab">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 10h18M9 4v17M15 4v17"/></svg>월
+      </button>
+      <button data-view="list" role="tab">
+        <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>목록
+      </button>
+    </div>
+
+    <label class="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="searchInput" type="search" placeholder="학회 검색  /" autocomplete="off" spellcheck="false">
+    </label>
+
+    <button id="addBtn" class="btn ghost" title="내 일정 추가 (빈 날짜를 두 번 클릭해도 돼요)">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>일정
+    </button>
+    <button id="exportBtn" class="btn primary" title="지금 보이는 앞으로의 일정을 .ics 파일로 저장 (구글·아웃룩 캘린더로 가져오기)">
+      <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>캘린더로 내보내기
+    </button>
+    <button id="themeBtn" class="icon-btn" title="테마 바꾸기" aria-label="테마 바꾸기"></button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-scroll">
+        <section class="side-sec">
+          <h3>분야</h3>
+          <div id="catFilters"></div>
+        </section>
+        <section class="side-sec">
+          <h3>등급 <span class="hint">하나라도 맞으면 표시</span></h3>
+          <div id="rankFilters" class="chips"></div>
+        </section>
+        <section class="side-sec">
+          <h3>일정 종류</h3>
+          <div id="typeFilters"></div>
+        </section>
+        <section class="side-sec">
+          <h3>즐겨찾기</h3>
+          <label class="check-row">
+            <input type="checkbox" id="starOnly">
+            <span class="box"></span><span class="label">즐겨찾기한 학회만 보기</span>
+          </label>
+          <div id="starList" class="star-list"></div>
+        </section>
+      </div>
+      <div class="side-foot">
+        <div id="status" class="status"></div>
+        <button id="refreshBtn" class="btn ghost small" title="웹에서 최신 데이터 다시 받기">
+          <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>새로고침
+        </button>
+        <div id="updateBox" class="update-box" hidden></div>
+        <div class="credit"><span id="appVersion"></span> · 데이터 출처 · <a href="https://github.com/ccfddl/ccf-deadlines" target="_blank" rel="noreferrer">ccfddl/ccf-deadlines</a></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="monthView" class="month-view card"></div>
+      <div id="listView" class="list-view card" hidden></div>
+    </main>
+
+    <aside class="upcoming">
+      <div class="up-head">
+        <h3>다가오는 마감</h3>
+        <span id="upCount" class="muted small"></span>
+      </div>
+      <div id="hero"></div>
+      <div id="upList" class="up-list"></div>
+    </aside>
+  </div>
+
+  <div id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-backdrop" data-close></div>
+    <div id="drawerPanel" class="drawer-panel" role="dialog" aria-modal="true"></div>
+  </div>
+  <div id="popover" class="popover" hidden></div>
+  <div id="tooltip" class="tooltip" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
