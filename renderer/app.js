@@ -39,16 +39,34 @@ const GROUPS = [
   { id: 'sys', name: '시스템' },
   { id: 'etc', name: '기타 분야' },
 ];
-// 등급: BK21 FOUR 인정 IF(1~4) / 한국정보과학회 2024 우수학술대회
-const RANKS = [
-  { id: 'bk4', label: '4점', group: 'bk', test: (g) => g.bk === 4 },
-  { id: 'bk3', label: '3점', group: 'bk', test: (g) => g.bk === 3 },
-  { id: 'bk2', label: '2점', group: 'bk', test: (g) => g.bk === 2 },
-  { id: 'bk1', label: '1점', group: 'bk', test: (g) => g.bk === 1 },
-  { id: 'kTop', label: '최우수', group: 'kiise', test: (g) => g.kiise === '최우수' },
-  { id: 'kGood', label: '우수', group: 'kiise', test: (g) => g.kiise === '우수' },
-];
-const RANK_IDS = new Set(RANKS.map((r) => r.id));
+// 등급 기준. 하나를 고르면 그 기준의 세부 등급이 필터·배지로 보인다.
+//  get(c) → 그 학회의 등급 값 ('' = 목록에 없음)
+const CRITERIA = {
+  bk: {
+    name: 'BK21', full: '4단계 BK21 우수 국제학술대회 인정 IF (1~4점)',
+    tiers: [['4', '4점'], ['3', '3점'], ['2', '2점'], ['1', '1점']], top: '4',
+    get: (c) => (c.grade.bk ? String(c.grade.bk) : ''), badge: (v) => `BK ${v}점`,
+  },
+  kiise: {
+    name: '정보과학회', full: '한국정보과학회 2024 우수학술대회',
+    tiers: [['최우수', '최우수'], ['우수', '우수']], top: '최우수',
+    get: (c) => c.grade.kiise || '', badge: (v) => `정보과학회 ${v}`,
+  },
+  ccf: {
+    name: 'CCF', full: '중국컴퓨터학회(CCF) 추천 목록',
+    tiers: [['A', 'A'], ['B', 'B'], ['C', 'C']], top: 'A',
+    get: (c) => (['A', 'B', 'C'].includes(c.rank.ccf) ? c.rank.ccf : ''), badge: (v) => `CCF ${v}`,
+  },
+  core: {
+    name: 'CORE', full: 'CORE 학회 등급 (호주·뉴질랜드)',
+    tiers: [['A*', 'A*'], ['A', 'A'], ['B', 'B'], ['C', 'C']], top: 'A*',
+    get: (c) => (['A*', 'A', 'B', 'C'].includes(c.rank.core) ? c.rank.core : ''), badge: (v) => `CORE ${v}`,
+  },
+};
+const CRIT_KEYS = Object.keys(CRITERIA);
+const NONE = '-'; // 목록에 없는 학회
+const DEFAULT_TIERS = { bk: ['4', '3'], kiise: ['최우수'], ccf: ['A'], core: ['A*'] };
+const gradeOf = (c, k = state.crit) => CRITERIA[k].get(c) || NONE;
 const TYPES = {
   deadline: { name: '논문 마감', tag: '마감' },
   abstract: { name: '초록 마감', tag: '초록' },
@@ -195,7 +213,9 @@ const state = {
   // v1.2에서 분야·등급 체계가 바뀌어서, 예전 설정이면 새 기본값으로
   subs: new Set(prefs.v12 && prefs.subs ? prefs.subs
     : Object.keys(CATS).filter((k) => CATS[k].group !== 'etc')),
-  ranks: new Set(prefs.v12 && prefs.ranks ? prefs.ranks.filter((r) => RANK_IDS.has(r)) : ['bk4', 'kTop']),
+  crit: CRIT_KEYS.includes(prefs.crit) ? prefs.crit : 'kiise',
+  tiers: Object.fromEntries(CRIT_KEYS.map((k) => [k, new Set(
+    prefs.tiers && Array.isArray(prefs.tiers[k]) ? prefs.tiers[k] : DEFAULT_TIERS[k])])),
   types: new Set([...(prefs.types || ['deadline', 'abstract', 'conf']), ...(prefs.typesV2 ? [] : ['mine'])]),
   myEvents: [],
   mine: [],
@@ -212,7 +232,7 @@ const state = {
 };
 function savePrefs() {
   store.set(PREF_KEY, {
-    view: state.view, subs: [...state.subs], ranks: [...state.ranks], types: [...state.types], typesV2: true, v12: true,
+    view: state.view, subs: [...state.subs], crit: state.crit, tiers: Object.fromEntries(CRIT_KEYS.map((k) => [k, [...state.tiers[k]]])), types: [...state.types], typesV2: true, v12: true,
     starredOnly: state.starredOnly, etcOpen: state.etcOpen, sysExtras: state.sysExtras, theme: state.theme,
   });
 }
@@ -270,7 +290,8 @@ function confMatches(c) {
   if (starred) return true;
   if (state.sysExtras && SYS_EXTRAS.includes(c.title)) return true;
   if (!state.subs.has(c.cat)) return false;
-  if (state.ranks.size && !RANKS.some((r) => state.ranks.has(r.id) && r.test(c.grade))) return false;
+  const sel = state.tiers[state.crit];
+  if (sel.size && !sel.has(gradeOf(c))) return false;
   return true;
 }
 
@@ -428,13 +449,21 @@ function renderHeader() {
   for (const b of document.querySelectorAll('#viewSeg button')) b.classList.toggle('on', b.dataset.view === state.view);
 }
 
+function gradeBadge(c, k) {
+  const cr = CRITERIA[k];
+  const v = cr.get(c);
+  if (!v) return '';
+  const lvl = cr.tiers.findIndex(([id]) => id === v); // 0 = 최상위
+  return `<span class="rank lv${lvl}" title="${esc(cr.full)}">${esc(cr.badge(v))}</span>`;
+}
+// 목록·툴팁: 지금 고른 기준의 등급만
 function rankBadges(c, { venue = true } = {}) {
-  const g = c.grade || {};
-  const out = [];
-  if (g.bk) out.push(`<span class="rank bk${g.bk}" title="BK21 FOUR 인정 IF">BK ${g.bk}점</span>`);
-  if (g.kiise) out.push(`<span class="rank ${g.kiise === '최우수' ? 'top' : ''}" title="한국정보과학회 2024 우수학술대회">정보과학회 ${esc(g.kiise)}</span>`);
-  if (venue) out.push(venueBadge(c));
-  return out.join('');
+  return gradeBadge(c, state.crit) + (venue ? venueBadge(c) : '');
+}
+// 상세 화면: 모든 기준
+function allGradeBadges(c) {
+  const parts = CRIT_KEYS.map((k) => gradeBadge(c, k)).filter(Boolean);
+  return (parts.length ? parts.join('') : '<span class="rank muted-rank">등급 목록에 없음</span>') + venueBadge(c);
 }
 function venueBadge(c) {
   return c.journal
@@ -706,13 +735,18 @@ function renderSidebar() {
     </div>`;
   }).join('');
 
-  const gradeCount = (r) => state.conferences.filter((c) => r.test(c.grade || {})).length;
-  const chip = (r) => `<button class="chip ${state.ranks.has(r.id) ? 'on' : ''}" data-rank="${r.id}" title="${gradeCount(r)}개 학회">${r.label}</button>`;
+  const cr = CRITERIA[state.crit];
+  const sel = state.tiers[state.crit];
+  const count = (id) => state.conferences.filter((c) => gradeOf(c) === id).length;
+  const chip = (id, label) => `<button class="chip ${sel.has(id) ? 'on' : ''}" data-tier="${esc(id)}">${esc(label)}<span class="chip-n">${count(id)}</span></button>`;
   $('#rankFilters').innerHTML = `
-    <div class="rank-row"><span class="rank-label">BK21</span>${RANKS.filter((r) => r.group === 'bk').map(chip).join('')}</div>
-    <div class="rank-row"><span class="rank-label">정보과학회</span>${RANKS.filter((r) => r.group === 'kiise').map(chip).join('')}
-      <button class="chip ${state.ranks.size === 0 ? 'on' : ''}" data-rank="">전체</button></div>
-    <div class="rank-src">BK21: 4단계 BK21 우수 국제학술대회 인정 IF · 정보과학회: 2024 우수학술대회</div>`;
+    <div class="seg crit-seg">${CRIT_KEYS.map((k) => `<button data-crit="${k}" class="${k === state.crit ? 'on' : ''}">${CRITERIA[k].name}</button>`).join('')}</div>
+    <div class="tier-row">
+      ${cr.tiers.map(([id, label]) => chip(id, label)).join('')}
+      ${chip(NONE, '목록 외')}
+      <button class="chip ${sel.size === 0 ? 'on' : ''}" data-tier="">전체</button>
+    </div>
+    <div class="rank-src">${esc(cr.full)}</div>`;
 
   $('#typeFilters').innerHTML = TYPE_FILTERS.map((t) => {
     const on = t.types.every((x) => state.types.has(x));
@@ -819,7 +853,7 @@ function renderDrawer() {
         <button class="icon-btn" data-close title="닫기 (Esc)">${ICON.close}</button>
       </div>
       <p class="d-desc">${esc(c.description)}</p>
-      <div class="badges">${rankBadges(c)}${!c.grade.bk && !c.grade.kiise ? '<span class="rank muted-rank">BK21·정보과학회 목록에 없음</span>' : ''}</div>
+      <div class="badges">${allGradeBadges(c)}</div>
     </div>
     <div class="d-body" style="--c:${cat.color}">
       <div class="years">${years}</div>
@@ -1168,12 +1202,15 @@ function bindUI() {
     savePrefs(); renderSidebar(); render();
   });
   $('#rankFilters').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-rank]');
+    const c = e.target.closest('button[data-crit]');
+    if (c) { state.crit = c.dataset.crit; savePrefs(); renderSidebar(); render(); return; }
+    const b = e.target.closest('button[data-tier]');
     if (!b) return;
-    const id = b.dataset.rank;
-    if (!id) state.ranks.clear();
-    else if (state.ranks.has(id)) state.ranks.delete(id);
-    else state.ranks.add(id);
+    const sel = state.tiers[state.crit];
+    const id = b.dataset.tier;
+    if (!id) sel.clear();
+    else if (sel.has(id)) sel.delete(id);
+    else sel.add(id);
     savePrefs(); renderSidebar(); render();
   });
   $('#typeFilters').addEventListener('change', (e) => {

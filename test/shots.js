@@ -40,6 +40,18 @@ async function takeShots(win, dir) {
     return { visible: state.visibleConfCount, per, OSDI: pick('OSDI'), ICLR: pick('ICLR'), VLDB: pick('VLDB'), PLDI: pick('PLDI'), MLSys: pick('MLSys'), CVPR: pick('CVPR'), FAST: pick('FAST') };
   })()`);
   report.update = await js(`window.api.checkUpdate()`);
+  report.criteria = await js(`(() => {
+    const out = {};
+    for (const k of CRIT_KEYS) {
+      document.querySelector('[data-crit="' + k + '"]').click();
+      out[k] = { visible: state.visibleConfCount, chips: [...document.querySelectorAll('#rankFilters [data-tier]')].map((b) => b.textContent.trim()).join(' | '), badge: (document.querySelector('.lanes .ev') ? '' : '') };
+    }
+    document.querySelector('[data-crit="bk"]').click();
+    return out;
+  })()`);
+  await shot('11-crit-bk');
+  report.critBadge = await js(`document.querySelector('.upcoming [data-ev]') && rankBadges(state.byId.get(document.querySelector('.upcoming [data-ev]:not([data-ev^="mine|"])').dataset.ev).conf)`);
+  await js(`document.querySelector('[data-crit="kiise"]').click()`);
   report.extras = await js(`state.conferences.filter((c) => SYS_EXTRAS.includes(c.title)).map((c) => [c.title, confMatches(c)])`);
   report.extrasOff = await js(`(() => { state.sysExtras = false; const r = state.conferences.filter((c) => SYS_EXTRAS.includes(c.title)).map((c) => [c.title, confMatches(c)]); state.sysExtras = true; return r; })()`);
   report.wheel = await js(`(async () => {
