@@ -11,6 +11,23 @@ contextBridge.exposeInMainWorld('api', {
   setTheme: (mode) => ipcRenderer.invoke('theme:set', mode),
   loadMine: () => ipcRenderer.invoke('mine:load'),
   saveMine: (events) => ipcRenderer.invoke('mine:save', events),
+  onMineChanged: (cb) => {
+    const handler = (_e, events) => cb(events);
+    ipcRenderer.on('mine:changed', handler);
+    return () => ipcRenderer.removeListener('mine:changed', handler);
+  },
+  google: {
+    status: () => ipcRenderer.invoke('google:status'),
+    configure: (clientId, clientSecret) => ipcRenderer.invoke('google:configure', { clientId, clientSecret }),
+    connect: () => ipcRenderer.invoke('google:connect'),
+    disconnect: () => ipcRenderer.invoke('google:disconnect'),
+    sync: () => ipcRenderer.invoke('google:sync'),
+    onStatus: (cb) => {
+      const handler = (_e, s) => cb(s);
+      ipcRenderer.on('google:status', handler);
+      return () => ipcRenderer.removeListener('google:status', handler);
+    },
+  },
   updateState: () => ipcRenderer.invoke('update:state'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   onUpdate: (cb) => {

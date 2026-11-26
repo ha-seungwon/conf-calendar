@@ -4,6 +4,7 @@ const { app, BrowserWindow, ipcMain, shell, dialog, net, nativeTheme } = require
 const path = require('path');
 const fs = require('fs/promises');
 const { SOURCE_URL, normalize } = require('./src/data');
+const mineStore = require('./src/mine-store');
 
 const BUNDLED = path.join(__dirname, 'data', 'allconf.snapshot.yml');
 const cacheDir = () => path.join(app.getPath('userData'), 'cache');
@@ -94,48 +95,6 @@ async function refreshFromWeb() {
 ipcMain.handle('data:load', () => readCache());
 ipcMain.handle('data:refresh', () => refreshFromWeb());
 
-/* ───── 내 일정: userData/my-events.json 에 저장 (앱 업데이트해도 유지) ───── */
-const myEventsFile = () => path.join(app.getPath('userData'), 'my-events.json');
-const YMD = /^\d{4}-\d{2}-\d{2}$/;
-
-function cleanMyEvent(m) {
-  if (!m || typeof m !== 'object') return null;
-  const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
-  const out = {
-    id: str(m.id, 64),
-    title: str(m.title, 200).trim(),
-    date: str(m.date, 10),
-    endDate: YMD.test(m.endDate || '') ? m.endDate : '',
-    time: /^\d{2}:\d{2}$/.test(m.time || '') ? m.time : '',
-    color: /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : '#ff6b3d',
-    memo: str(m.memo, 5000),
-    updatedAt: Number(m.updatedAt) || Date.now(),
-  };
-  if (!out.id || !out.title || !YMD.test(out.date)) return null;
-  if (out.endDate && out.endDate <= out.date) out.endDate = '';
-  return out;
-}
-
-ipcMain.handle('mine:load', async () => {
-  try {
-    const j = JSON.parse(await fs.readFile(myEventsFile(), 'utf8'));
-    return (Array.isArray(j.events) ? j.events : []).map(cleanMyEvent).filter(Boolean);
-  } catch {
-    return [];
-  }
-});
-
-ipcMain.handle('mine:save', async (_e, events) => {
-  if (!Array.isArray(events) || events.length > 5000) throw new Error('일정 데이터가 올바르지 않습니다.');
-  const clean = events.map(cleanMyEvent).filter(Boolean);
-  const file = myEventsFile();
-  const tmp = `${file}.tmp`;
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(tmp, JSON.stringify({ version: 1, events: clean }, null, 2), 'utf8');
-  await fs.rename(tmp, file); // 저장 중 꺼져도 기존 파일이 깨지지 않게
-  return clean;
-});
-
 /* ───── 자동 업데이트: GitHub Releases 의 최신 버전을 받아서 재시작 시 설치 ───── */
 let updateState = { status: 'idle' };
 function sendUpdate(next) {
@@ -195,6 +154,7 @@ ipcMain.handle('theme:set', (_e, mode) => {
 app.whenReady().then(() => {
   app.setAppUserModelId('local.conf-calendar');
   createWindow();
+  mineStore.setup(() => win);
   setupAutoUpdate();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });

@@ -1,0 +1,29 @@
+name: 피드백
+description: 버그, 기능 제안, 학회 데이터 오류 등 무엇이든 알려 주세요
+title: "[피드백] "
+labels: ["feedback"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 종류
+      options:
+        - 기능 제안
+        - 버그 신고
+        - 학회 데이터 오류 (날짜·장소 등)
+        - 기타
+    validations:
+      required: true
+  - type: textarea
+    id: content
+    attributes:
+      label: 내용
+      description: 어떤 점이 불편했는지, 무엇이 있으면 좋겠는지 자유롭게 적어 주세요. 버그라면 어떻게 하면 생기는지도 알려 주세요.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 앱 버전
+      description: 앱 왼쪽 아래에 보이는 버전 (피드백 버튼으로 열면 자동으로 채워져요)
+      placeholder: v1.0.0

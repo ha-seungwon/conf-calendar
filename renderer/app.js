@@ -278,12 +278,15 @@ function buildMine() {
   for (const e of state.mine) state.byId.set(e.id, e);
 }
 
-async function persistMine(next) {
-  const saved = await window.api.saveMine(next);
+function setMine(list) {
   for (const id of [...state.byId.keys()]) if (id.startsWith('mine|')) state.byId.delete(id);
-  state.myEvents = saved;
+  state.myEvents = Array.isArray(list) ? list : [];
   buildMine();
   render();
+}
+
+async function persistMine(next) {
+  setMine(await window.api.saveMine(next));
 }
 
 function mineWhen(m) {
@@ -303,7 +306,7 @@ function openMineEditor(m, dayN) {
   $('#drawerPanel').innerHTML = `
     <form id="mineForm" class="mine-form" autocomplete="off">
       <div class="d-head" style="--c:${esc(base.color)}">
-        <div class="d-cat"><span class="dot"></span>내 일정</div>
+        <div class="d-cat"><span class="dot"></span>내 일정${m && m.synced ? ' · 구글 캘린더와 동기화됨' : ''}</div>
         <div class="d-titlerow">
           <h2>${editing ? '일정 수정' : '새 일정'}</h2>
           <button type="button" class="icon-btn" data-close title="닫기 (Esc)">${ICON.close}</button>
@@ -319,6 +322,8 @@ function openMineEditor(m, dayN) {
         <label class="field"><span>시간 <em>비우면 하루 종일</em></span><input type="time" name="time" value="${esc(base.time)}" ${base.endDate ? 'disabled' : ''}></label>
         <div class="field"><span>색</span><div class="sw-row">${swatches}</div></div>
         <label class="field"><span>메모</span><textarea name="memo" rows="5" maxlength="5000" placeholder="장소, 링크, 할 일 등">${esc(base.memo)}</textarea></label>
+        ${m && m.recurring ? '<p class="form-note">구글의 반복 일정이에요. 여기서 바꾸거나 지우면 이 날짜 하나만 바뀌어요.</p>' : ''}
+        ${m && m.synced ? '<p class="form-note">색은 이 앱에서만 바뀌고, 나머지는 구글 캘린더에도 반영돼요.</p>' : ''}
         <p class="form-error" hidden></p>
       </div>
       <div class="d-actions">
@@ -730,7 +735,7 @@ function closeDrawer() {
 }
 
 function renderDrawer() {
-  if (!state.drawer || state.drawer.mode === 'mine') return; // 입력 중인 양식은 다시 그리지 않음
+  if (!state.drawer || state.drawer.mode) return; // 입력 중인 양식(내 일정·구글·피드백)은 다시 그리지 않음
   const { key, edId, focusId } = state.drawer;
   const c = state.confByKey.get(key);
   if (!c) return;
@@ -1152,9 +1157,9 @@ function bindUI() {
   });
 
   $('#drawer').addEventListener('submit', (e) => {
-    if (e.target.id !== 'mineForm') return;
     e.preventDefault();
-    submitMine(e.target);
+    if (e.target.id === 'mineForm') submitMine(e.target);
+    else if (e.target.id === 'googleForm') submitGoogle(e.target);
   });
   $('#drawer').addEventListener('input', (e) => {
     // 색을 고르면 머리 색도 바로 바뀌게
@@ -1249,13 +1254,176 @@ function tick() {
   if (tickCount % 1800 === 0) notifyUpcoming();
 }
 
+/* ════════════════ 구글 캘린더 연동 ════════════════ */
+const GOOGLE_STEPS = [
+  ['새 프로젝트 만들기', 'Google Cloud 콘솔에서 프로젝트를 하나 만들어요 (이름은 아무거나).', 'https://console.cloud.google.com/projectcreate'],
+  ['Google Calendar API 사용', '열린 화면에서 "사용"을 눌러요.', 'https://console.cloud.google.com/apis/library/calendar-json.googleapis.com'],
+  ['OAuth 동의 화면', '"시작하기" → 앱 이름·이메일 입력 → 대상은 "외부". 만든 뒤 "대상" 메뉴에서 "앱 게시"를 누르면 7일마다 다시 로그인하지 않아도 돼요.', 'https://console.cloud.google.com/auth/overview'],
+  ['클라이언트 만들기', '"클라이언트 만들기" → 유형 "데스크톱 앱" → 만들어진 클라이언트 ID와 보안 비밀번호를 아래에 붙여 넣어요.', 'https://console.cloud.google.com/auth/clients'],
+];
+state.google = { configured: false, connected: false };
+
+function renderGoogle() {
+  const g = state.google;
+  const box = $('#googleBox');
+  if (!box) return;
+  if (g.connecting) {
+    box.innerHTML = `<div class="g-line"><span class="led busy"></span>브라우저에서 구글 로그인을 마쳐 주세요…</div>`;
+    return;
+  }
+  if (!g.connected) {
+    box.innerHTML = `<p class="g-hint">내 일정을 구글 캘린더와 양방향으로 맞춰요. 구글 일정은 앱에, 앱에서 바꾼 일정은 구글에 반영돼요.</p>
+      <div class="g-btns">
+        ${g.configured ? '<button class="btn primary small" data-g="connect">구글 계정 연결</button>' : ''}
+        <button class="btn ghost small" data-g="setup">${g.configured ? '설정' : '연동 설정하기'}</button>
+      </div>`;
+    return;
+  }
+  const when = g.syncing ? '동기화 중…' : g.lastSync ? `${fmtRelative(g.lastSync)} 동기화` : '아직 동기화 전';
+  box.innerHTML = `<div class="g-line"><span class="led ${g.needsReauth || g.lastError ? 'warn' : g.syncing ? 'busy' : 'ok'}"></span>
+      <span class="g-acc" title="${esc(g.account)}">${esc(g.account || '구글 캘린더')}</span></div>
+    <div class="g-sub">${when}</div>
+    ${g.needsReauth ? '<div class="g-err">로그인이 만료됐어요. 다시 연결해 주세요.</div>'
+      : g.lastError ? `<div class="g-err">${esc(g.lastError)}</div>` : ''}
+    <div class="g-btns">
+      ${g.needsReauth ? '<button class="btn primary small" data-g="connect">다시 연결</button>'
+        : `<button class="btn ghost small" data-g="sync" ${g.syncing ? 'disabled' : ''}>지금 동기화</button>`}
+      <button class="btn ghost small" data-g="disconnect">연결 해제</button>
+    </div>`;
+}
+
+function openGoogleSetup() {
+  const g = state.google;
+  state.drawer = { mode: 'google' };
+  $('#drawerPanel').innerHTML = `
+    <form id="googleForm" class="mine-form" autocomplete="off">
+      <div class="d-head" style="--c:#4285f4">
+        <div class="d-cat"><span class="dot"></span>구글 캘린더 연동</div>
+        <div class="d-titlerow"><h2>연동 설정</h2>
+          <button type="button" class="icon-btn" data-close title="닫기 (Esc)">${ICON.close}</button></div>
+        <p class="d-desc">구글 정책상 각자 무료 "OAuth 클라이언트"를 한 번 만들어야 해요. 5분 정도 걸리고, 한 번만 하면 돼요.</p>
+      </div>
+      <div class="d-body">
+        <ol class="g-steps">
+          ${GOOGLE_STEPS.map(([t, d, url]) => `<li><b>${t}</b><span>${d}</span>
+            <button type="button" class="btn ghost small" data-open="${url}">${ICON.link}열기</button></li>`).join('')}
+        </ol>
+        <label class="field"><span>클라이언트 ID</span>
+          <input name="clientId" required placeholder="1234…-abcd.apps.googleusercontent.com" value="${esc(g.clientId || '')}" spellcheck="false"></label>
+        <label class="field"><span>클라이언트 보안 비밀번호 ${g.configured ? '<em>저장돼 있음 · 바꿀 때만 입력</em>' : ''}</span>
+          <input name="clientSecret" type="password" ${g.configured ? '' : 'required'} placeholder="GOCSPX-…" spellcheck="false"></label>
+        <p class="form-note">보안 비밀번호와 로그인 정보는 이 PC에만 암호화해서 저장해요. 처음 로그인할 때 "Google에서 확인하지 않은 앱" 화면이 나오면 "고급 → (앱 이름)(으)로 이동"을 누르세요. 직접 만든 클라이언트라서 나오는 안내예요.</p>
+        <p class="form-error" hidden></p>
+      </div>
+      <div class="d-actions">
+        <button type="submit" class="btn primary">저장하고 구글 계정 연결</button>
+        <button type="button" class="btn ghost" data-close>취소</button>
+      </div>
+    </form>`;
+  const d = $('#drawer');
+  d.classList.add('open');
+  d.setAttribute('aria-hidden', 'false');
+  hideTooltip();
+  closePopover();
+}
+
+async function submitGoogle(form) {
+  const err = $('.form-error', form);
+  const clientId = form.clientId.value.trim();
+  const clientSecret = form.clientSecret.value.trim();
+  const btn = $('button[type=submit]', form);
+  err.hidden = true;
+  try {
+    btn.disabled = true;
+    if (clientSecret || !state.google.configured || clientId !== state.google.clientId) {
+      state.google = await window.api.google.configure(clientId, clientSecret);
+    }
+    closeDrawer();
+    googleAction('connect');
+  } catch (e) {
+    err.textContent = cleanErr(e);
+    err.hidden = false;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function googleAction(kind, btn) {
+  try {
+    if (kind === 'setup') { openGoogleSetup(); return; }
+    if (kind === 'disconnect') {
+      if (!btn.dataset.armed) {
+        btn.dataset.armed = '1';
+        btn.textContent = '한 번 더 누르면 해제';
+        setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = '연결 해제'; } }, 3000);
+        return;
+      }
+      state.google = await window.api.google.disconnect();
+      toast('구글 캘린더 연결을 해제했어요. 구글에서 가져온 일정은 앱에서 빠졌어요.');
+    } else if (kind === 'connect') {
+      toast('브라우저에서 구글 계정으로 로그인하고 권한을 허용해 주세요.', { ms: 8000 });
+      state.google = await window.api.google.connect();
+      if (state.google.connected && !state.google.lastError) toast(`구글 캘린더(${state.google.account})와 연결했어요.`);
+    } else if (kind === 'sync') {
+      state.google = await window.api.google.sync();
+    }
+  } catch (e) {
+    toast(`구글 캘린더: ${cleanErr(e)}`, { ms: 8000 });
+    state.google = await window.api.google.status().catch(() => state.google);
+  }
+  renderGoogle();
+}
+
+function bindGoogle() {
+  window.api.google.status().then((s) => { state.google = s; renderGoogle(); }).catch(() => {});
+  window.api.google.onStatus((s) => { state.google = s; renderGoogle(); });
+  $('#googleBox').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-g]');
+    if (b) googleAction(b.dataset.g, b);
+  });
+  setInterval(renderGoogle, 60000); // "n분 전" 갱신
+}
+
+/* ════════════════ 피드백 (GitHub Issues) ════════════════ */
+const REPO_URL = 'https://github.com/ha-seungwon/conf-calendar';
+function openFeedback() {
+  state.drawer = { mode: 'feedback' };
+  const ver = state.appVersion ? `v${state.appVersion}` : '';
+  const newUrl = `${REPO_URL}/issues/new?template=feedback.yml&labels=feedback${ver ? `&version=${encodeURIComponent(ver)}` : ''}`;
+  $('#drawerPanel').innerHTML = `
+    <div class="d-head" style="--c:#6d5dfc">
+      <div class="d-cat"><span class="dot"></span>피드백</div>
+      <div class="d-titlerow"><h2>의견 보내기</h2>
+        <button type="button" class="icon-btn" data-close title="닫기 (Esc)">${ICON.close}</button></div>
+      <p class="d-desc">버그, 원하는 기능, 틀린 학회 날짜 등 무엇이든 알려 주세요.</p>
+    </div>
+    <div class="d-body">
+      <div class="fb-card">
+        <b>✍️ 피드백 남기기</b>
+        <span>브라우저에서 짧은 양식이 열려요. GitHub 계정으로 로그인하면 바로 올라가요.</span>
+        <button class="btn primary" data-open="${esc(newUrl)}">${ICON.link}피드백 작성하기</button>
+      </div>
+      <div class="fb-card">
+        <b>💬 모든 피드백 보기</b>
+        <span>다른 사용자들이 남긴 피드백과 답변이 실시간으로 쌓여요. 공감(👍)이나 댓글도 남길 수 있어요.</span>
+        <button class="btn ghost" data-open="${REPO_URL}/issues?q=label%3Afeedback">${ICON.link}피드백 게시판 열기</button>
+      </div>
+      <p class="form-note">피드백은 GitHub에 공개로 올라가요. 개인 정보는 적지 마세요. ${ver ? `지금 버전: ${ver}` : ''}</p>
+    </div>`;
+  const d = $('#drawer');
+  d.classList.add('open');
+  d.setAttribute('aria-hidden', 'false');
+  hideTooltip();
+  closePopover();
+}
+
 /* ════════════════ 자동 업데이트 표시 ════════════════ */
 function bindUpdates() {
   const box = $('#updateBox');
   let announced = false;
   const show = (s) => {
     if (!s) return;
-    if (s.current) $('#appVersion').textContent = `v${s.current}`;
+    if (s.current) { state.appVersion = s.current; $('#appVersion').textContent = `v${s.current}`; }
     if (s.status === 'downloading') {
       box.hidden = false;
       box.innerHTML = `<span>새 버전 v${esc(s.version || '')} 받는 중… ${Number(s.percent) || 0}%</span>`;
@@ -1282,7 +1450,10 @@ async function init() {
   applyTheme();
   bindUI();
   bindUpdates();
+  bindGoogle();
+  $('#feedbackBtn').addEventListener('click', openFeedback);
   try { state.myEvents = await window.api.loadMine(); } catch { state.myEvents = []; }
+  window.api.onMineChanged((list) => setMine(list)); // 구글에서 바뀐 일정
   try {
     setData(await window.api.loadData());
   } catch (err) {

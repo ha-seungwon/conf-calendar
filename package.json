@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node test/parse.test.js",
+    "test": "node test/parse.test.js && node test/gsync.test.js",
     "icon": "electron scripts/make-icon.js",
     "pack": "electron-builder --win nsis --publish never",
     "release": "node scripts/release.js"

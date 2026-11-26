@@ -84,6 +84,14 @@ async function takeShots(win, dir) {
   await js(`document.querySelector('[data-mine-delete]').click(); document.querySelector('[data-mine-delete]').click();`);
   await wait(500);
   report.mineAfterDelete = await js(`state.myEvents.map((m) => m.title)`);
+  report.google = await js(`window.api.google.status()`);
+  await js(`document.querySelector('[data-g="setup"]').click()`);
+  await shot('9-google-setup');
+  report.googleBadId = await js(`(async () => { try { await window.api.google.configure('bad', 'x'); return 'accepted?'; } catch (e) { return cleanErr(e); } })()`);
+  await js(`closeDrawer(); document.querySelector('#feedbackBtn').click()`);
+  await shot('10-feedback');
+  report.feedbackUrl = await js(`document.querySelector('.fb-card [data-open]').dataset.open`);
+  await js(`closeDrawer()`);
   report.mineIcs = await js(`buildIcs(state.mine, 't').split('BEGIN:VEVENT').slice(1).join('BEGIN:VEVENT')`);
   report.mineFile = await fs.readFile(path.join(dir, 'userdata', 'my-events.json'), 'utf8').catch((e) => String(e));
   report.upcomingExtras = await js(`state.visible.filter((e) => e.conf && SYS_EXTRAS.includes(e.conf.title) && e.type !== 'conf' && e.at > Date.now()).map((e) => e.conf.title + ' ' + e.ed.year + ' ' + e.type + ' ' + fmtFull(e.at))`);

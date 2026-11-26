@@ -543,3 +543,37 @@ svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width:
   background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .update-box .btn { justify-self: start; }
+
+/* ───────── 구글 캘린더 ───────── */
+.google-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 11px; display: grid; gap: 6px; }
+.g-hint { margin: 0; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.g-line { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; min-width: 0; }
+.g-line .led { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted-2); }
+.g-line .led.ok { background: #30a46c; }
+.g-line .led.busy { background: var(--accent); animation: pulse 1s infinite; }
+.g-line .led.warn { background: var(--warm); }
+.g-acc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-sub { font-size: 11px; color: var(--muted); padding-left: 15px; }
+.g-err { font-size: 11px; color: var(--hot); line-height: 1.4; }
+.g-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.g-btns .btn:disabled { opacity: .5; cursor: default; }
+.g-steps { margin: 0 0 18px; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 10px; }
+.g-steps li {
+  counter-increment: step; display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 10px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+}
+.g-steps li::before {
+  content: counter(step); grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: #4285f4; color: #fff; font-size: 12px; font-weight: 800;
+}
+.g-steps li b { font-size: 13px; }
+.g-steps li span { grid-column: 2; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.g-steps li .btn { grid-column: 3; grid-row: 1 / span 2; }
+.form-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 10px; }
+
+/* ───────── 피드백 ───────── */
+#feedbackBtn { justify-self: start; }
+.fb-card { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); margin-bottom: 12px; }
+.fb-card b { font-size: 15px; }
+.fb-card span { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.fb-card .btn { justify-self: start; margin-top: 4px; }
