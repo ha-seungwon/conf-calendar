@@ -1385,7 +1385,7 @@ function openGoogleSetup() {
           <input name="clientId" required placeholder="1234…-abcd.apps.googleusercontent.com" value="${esc(g.clientId || '')}" spellcheck="false"></label>
         <label class="field"><span>클라이언트 보안 비밀번호 ${g.configured ? '<em>저장돼 있음 · 바꿀 때만 입력</em>' : ''}</span>
           <input name="clientSecret" type="password" ${g.configured ? '' : 'required'} placeholder="GOCSPX-…" spellcheck="false"></label>
-        <p class="form-note">보안 비밀번호와 로그인 정보는 이 PC에만 암호화해서 저장해요. 처음 로그인할 때 "Google에서 확인하지 않은 앱" 화면이 나오면 "고급 → (앱 이름)(으)로 이동"을 누르세요. 직접 만든 클라이언트라서 나오는 안내예요.</p>
+        <p class="form-note">보안 비밀번호·로그인 토큰·계정 이메일은 이 PC의 이 사용자 계정에서만 풀 수 있게 OS 암호화(Windows DPAPI / Mac 키체인)로 저장해요. 내 일정도 같은 방식으로 암호화돼요. 처음 로그인할 때 "Google에서 확인하지 않은 앱" 화면이 나오면 "고급 → (앱 이름)(으)로 이동"을 누르세요. 직접 만든 클라이언트라서 나오는 안내예요.</p>
         <p class="form-error" hidden></p>
       </div>
       <div class="d-actions">
@@ -1552,6 +1552,7 @@ async function init() {
   $('#feedbackBtn').addEventListener('click', openFeedback);
   try { state.myEvents = await window.api.loadMine(); } catch { state.myEvents = []; }
   window.api.onMineChanged((list) => setMine(list)); // 구글에서 바뀐 일정
+  window.api.onNotice((msg) => toast(msg, { ms: 12000 }));
   try {
     setData(await window.api.loadData());
   } catch (err) {

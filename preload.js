@@ -29,6 +29,11 @@ contextBridge.exposeInMainWorld('api', {
       return () => ipcRenderer.removeListener('google:status', handler);
     },
   },
+  onNotice: (cb) => {
+    const handler = (_e, msg) => cb(String(msg));
+    ipcRenderer.on('app:notice', handler);
+    return () => ipcRenderer.removeListener('app:notice', handler);
+  },
   updateState: () => ipcRenderer.invoke('update:state'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),

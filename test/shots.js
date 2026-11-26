@@ -33,6 +33,7 @@ async function takeShots(win, dir) {
 
   await wait(3500);
   await shot('1-month');
+  report.migrated = await js(`state.myEvents.map((m) => m.title)`); // 미리 넣어 둔 평문 일정이 읽혀야 함
   report.grading = await js(`(() => {
     const per = {};
     for (const c of state.conferences) if (confMatches(c)) per[c.cat] = (per[c.cat] || 0) + 1;
@@ -112,7 +113,12 @@ async function takeShots(win, dir) {
   report.feedbackUrl = await js(`document.querySelector('.fb-card [data-open]').dataset.open`);
   await js(`closeDrawer()`);
   report.mineIcs = await js(`buildIcs(state.mine, 't').split('BEGIN:VEVENT').slice(1).join('BEGIN:VEVENT')`);
-  report.mineFile = await fs.readFile(path.join(dir, 'userdata', 'my-events.json'), 'utf8').catch((e) => String(e));
+  const raw = await fs.readFile(path.join(dir, 'userdata', 'my-events.json'), 'utf8').catch((e) => String(e));
+  report.mineFile = {
+    encrypted: raw.includes('"enc": "safeStorage"'),
+    leaksTitle: /학회 출장|마이그레이션/.test(raw), // 평문이 남아 있으면 안 됨
+    bytes: raw.length,
+  };
   report.upcomingExtras = await js(`state.visible.filter((e) => e.conf && SYS_EXTRAS.includes(e.conf.title) && e.type !== 'conf' && e.at > Date.now()).map((e) => e.conf.title + ' ' + e.ed.year + ' ' + e.type + ' ' + fmtFull(e.at))`);
 
   // 즐겨찾기 + 상세

@@ -1,7 +1,8 @@
 'use strict';
 // 내 일정 저장소 + 구글 캘린더 연동 (메인 프로세스 전용)
-//  - 내 일정: userData/my-events.json (구글 동기화용 내부 필드 포함, 앱 업데이트해도 유지)
-//  - 구글 연동 정보: userData/google.json (클라이언트 보안 비밀·토큰은 Windows 암호화(safeStorage)로 저장)
+//  - 내 일정: userData/my-events.json — 내용 전체를 OS 암호화(safeStorage)로 저장
+//  - 구글 연동 정보: userData/google.json — 보안 비밀·토큰·계정 이메일을 OS 암호화로 저장
+//  safeStorage: Windows는 DPAPI, Mac은 키체인. 이 PC의 이 사용자 계정에서만 풀 수 있다.
 const { app, ipcMain, shell, net, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs/promises');
@@ -72,27 +73,56 @@ async function writeJson(file, data) {
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
   await fs.rename(tmp, file); // 저장 중 꺼져도 기존 파일이 깨지지 않게
 }
+/* ───── 암호화 ───── */
+const canEncrypt = () => safeStorage.isEncryptionAvailable();
+const enc = (str) => safeStorage.encryptString(str).toString('base64');
+function dec(b) {
+  if (!b) return '';
+  if (b.startsWith('plain:')) return Buffer.from(b.slice(6), 'base64').toString(); // v1.1 이전 형식 읽기용
+  return safeStorage.decryptString(Buffer.from(b, 'base64'));
+}
+const NO_ENCRYPTION = '이 컴퓨터에서 OS 암호화 저장소를 쓸 수 없어서, 보안을 위해 구글 연동을 막았어요.';
+
+// 읽을 수 없는 파일은 덮어쓰지 않고 옆에 보관한다 (다른 PC에서 복사해 왔거나 키체인 접근을 거부한 경우 등)
+async function setAside(file, reason) {
+  const dst = `${file}.unreadable-${Date.now()}`;
+  await fs.rename(file, dst).catch(() => {});
+  send('app:notice', `저장된 내 일정을 열 수 없어서 따로 보관해 두었어요 (${path.basename(dst)}). 원인: ${reason}`);
+}
+
+let plaintextOnDisk = false;
 async function readStored() {
+  let text;
+  try { text = (await fs.readFile(myEventsFile(), 'utf8')).replace(/^﻿/, ''); } catch { return []; } // 아직 파일 없음
   try {
-    const j = JSON.parse(await fs.readFile(myEventsFile(), 'utf8'));
-    return (Array.isArray(j.events) ? j.events : []).map(cleanStored).filter(Boolean);
-  } catch {
+    const j = JSON.parse(text);
+    let events;
+    if (j.enc === 'safeStorage') {
+      events = JSON.parse(dec(j.data)).events;
+    } else {
+      events = j.events; // 예전 평문 형식 → 다음 저장 때 암호화
+      plaintextOnDisk = true;
+    }
+    return (Array.isArray(events) ? events : []).map(cleanStored).filter(Boolean);
+  } catch (err) {
+    await setAside(myEventsFile(), String(err.message || err).slice(0, 120));
     return [];
   }
 }
-const writeStored = (list) => writeJson(myEventsFile(), { version: 2, events: list });
+function writeStored(list) {
+  if (!canEncrypt()) return writeJson(myEventsFile(), { version: 3, events: list }); // 암호화를 못 쓰는 환경(일부 리눅스)
+  plaintextOnDisk = false;
+  return writeJson(myEventsFile(), { version: 3, enc: 'safeStorage', data: enc(JSON.stringify({ events: list })) });
+}
 
 /* ───── 구글 연동 정보 ───── */
-const enc = (s) => (safeStorage.isEncryptionAvailable()
-  ? safeStorage.encryptString(s).toString('base64')
-  : `plain:${Buffer.from(s).toString('base64')}`);
-function dec(b) {
-  if (!b) return '';
-  if (b.startsWith('plain:')) return Buffer.from(b.slice(6), 'base64').toString();
-  return safeStorage.decryptString(Buffer.from(b, 'base64'));
+const readAccount = (s) => { try { return s.accountEnc ? dec(s.accountEnc) : (s.account || ''); } catch { return ''; } };
+function setAccount(s, email) {
+  delete s.account;
+  s.accountEnc = email ? enc(email) : '';
 }
 async function gLoad() {
-  try { return JSON.parse(await fs.readFile(googleFile(), 'utf8')); } catch { return {}; }
+  try { return JSON.parse((await fs.readFile(googleFile(), 'utf8')).replace(/^﻿/, '')); } catch { return {}; }
 }
 const gSave = (s) => writeJson(googleFile(), s);
 
@@ -101,7 +131,8 @@ let connecting = false;
 async function status() {
   const s = await gLoad();
   return {
-    configured: !!(s.clientId && s.secretEnc), connected: !!s.refreshEnc, account: s.account || '',
+    configured: !!(s.clientId && s.secretEnc), connected: !!s.refreshEnc, account: readAccount(s),
+    encryption: canEncrypt(),
     lastSync: s.lastSync || null, lastError: s.lastError || '', needsReauth: !!s.needsReauth,
     syncing, connecting, clientId: s.clientId || '',
   };
@@ -133,7 +164,7 @@ async function runSync() {
       const list = result.events.map(cleanStored).filter(Boolean);
       await writeStored(list);
       send('mine:changed', toView(list));
-      if (result.calendar) s.account = result.calendar;
+      if (result.calendar) setAccount(s, result.calendar);
     });
     Object.assign(s, { lastSync: Date.now(), lastError: '', needsReauth: false });
   } catch (err) {
@@ -195,6 +226,19 @@ async function authorize(s) {
 function setup(winGetter) {
   getWin = winGetter;
 
+  // 예전 버전이 평문으로 남긴 데이터를 바로 암호화해 둔다
+  withLock(async () => {
+    const list = await readStored();
+    if (plaintextOnDisk && canEncrypt()) await writeStored(list);
+    const s = await gLoad();
+    let changed = false;
+    if (s.account && canEncrypt()) { setAccount(s, s.account); changed = true; }
+    for (const k of ['secretEnc', 'refreshEnc']) {
+      if (s[k] && s[k].startsWith('plain:') && canEncrypt()) { s[k] = enc(dec(s[k])); changed = true; }
+    }
+    if (changed) await gSave(s);
+  }).catch(() => {});
+
   ipcMain.handle('mine:load', () => withLock(async () => toView(await readStored())));
 
   ipcMain.handle('mine:save', (_e, events) => withLock(async () => {
@@ -210,6 +254,7 @@ function setup(winGetter) {
   ipcMain.handle('google:status', () => status());
 
   ipcMain.handle('google:configure', async (_e, cfg) => {
+    if (!canEncrypt()) throw new Error(NO_ENCRYPTION);
     const clientId = str(cfg && cfg.clientId, 300).trim();
     const clientSecret = str(cfg && cfg.clientSecret, 300).trim();
     if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId)) throw new Error('클라이언트 ID 형식이 아니에요. "….apps.googleusercontent.com" 으로 끝나야 해요.');
@@ -217,13 +262,14 @@ function setup(winGetter) {
     const s = await gLoad();
     const changed = s.clientId && s.clientId !== clientId;
     Object.assign(s, { clientId, secretEnc: enc(clientSecret) });
-    if (changed) Object.assign(s, { refreshEnc: '', account: '', lastSync: null });
+    if (changed) { Object.assign(s, { refreshEnc: '', lastSync: null }); setAccount(s, ''); }
     await gSave(s);
     return status();
   });
 
   ipcMain.handle('google:connect', async () => {
     if (connecting) return status();
+    if (!canEncrypt()) throw new Error(NO_ENCRYPTION);
     const s = await gLoad();
     if (!s.clientId || !s.secretEnc) throw new Error('먼저 구글 클라이언트 ID와 보안 비밀번호를 넣어 주세요.');
     connecting = true;
@@ -248,7 +294,8 @@ function setup(winGetter) {
   ipcMain.handle('google:disconnect', async () => {
     const s = await gLoad();
     if (s.refreshEnc) await revoke(fetchFn, dec(s.refreshEnc));
-    Object.assign(s, { refreshEnc: '', account: '', lastSync: null, lastError: '', needsReauth: false });
+    Object.assign(s, { refreshEnc: '', lastSync: null, lastError: '', needsReauth: false });
+    setAccount(s, '');
     await gSave(s);
     // 구글에서 가져온 일정은 앱에서 빼고, 앱에서 만든 일정은 남긴다
     await withLock(async () => {
