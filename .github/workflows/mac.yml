@@ -1,15 +1,14 @@
-# 맥용 설치 파일 빌드
-# 릴리스가 올라가면(npm run release) 맥 서버에서 .dmg 를 만들어 같은 릴리스에 붙인다.
-# 이미 있는 릴리스에 다시 붙이려면: Actions → "macOS build" → Run workflow → 태그 입력
+# 맥용 설치 파일 빌드 → 릴리스 공개
+# npm run release 가 "초안(draft)" 릴리스를 만들고 이 워크플로를 실행한다.
+# 맥 파일까지 다 붙은 뒤에 공개해야, "최신 버전 다운로드" 링크가 파일 없는 릴리스를 가리키지 않는다.
+# 직접 실행: Actions → "macOS build" → Run workflow → 태그 입력
 name: macOS build
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: '맥 빌드를 붙일 릴리스 태그 (예: v1.4.0)'
+        description: '맥 빌드를 붙일 릴리스 태그 (예: v1.8.0)'
         required: true
 
 permissions:
@@ -19,11 +18,11 @@ jobs:
   mac:
     runs-on: macos-latest
     env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ inputs.tag }}
           persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -43,3 +42,8 @@ jobs:
         run: |
           ls -la release
           gh release upload "$TAG" release/*.dmg release/*.zip release/latest-mac.yml --clobber
+
+      - name: Publish release (Windows + Mac files are all there now)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --draft=false --latest

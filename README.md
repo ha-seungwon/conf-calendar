@@ -41,7 +41,7 @@ npm version patch    # 1.0.0 → 1.0.1 (기능 추가면 minor), 커밋과 태�
 npm run release      # 설치 파일 빌드 → git push → GitHub Release 업로드
 ```
 
-Release가 올라가면 GitHub Actions(`.github/workflows/mac.yml`)가 맥 서버에서 .dmg를 만들어 같은 릴리스에 붙이고(약 10분), 이미 설치된 앱들이 다음 실행 때(켜 둔 상태면 6시간 안에) 알아서 새 버전을 받습니다.
+Release는 먼저 초안으로 올라가고, GitHub Actions(`.github/workflows/mac.yml`)가 맥 서버에서 .dmg를 만들어 붙인 뒤 공개합니다(약 3분, 명령이 끝날 때까지 기다림). 그래서 다운로드 링크가 파일 없는 버전을 가리키는 순간이 없어요. 공개되면 이미 설치된 앱들이 다음 실행 때(켜 둔 상태면 6시간 안에) 알아서 새 버전을 받습니다.
 필요한 것: [GitHub CLI](https://cli.github.com) 로그인(`gh auth login`), 커밋하지 않은 변경 없음, 실행 중인 앱 닫기.
 
 ## 개발

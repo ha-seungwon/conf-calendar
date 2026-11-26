@@ -39,6 +39,25 @@ for (const f of files) if (!fs.existsSync(f)) fail(`빌드 결과가 없어요: 
 const latest = fs.readFileSync(path.join(dist, 'latest.yml'), 'utf8');
 if (!latest.includes(`version: ${pkg.version}`)) fail('latest.yml 버전이 package.json 과 달라요.');
 
-// 4. GitHub Release 업로드 → 자동 업데이트 대상이 됨
-run(gh, ['release', 'create', tag, ...files, '--title', `학회 캘린더 ${tag}`, '--generate-notes', '--latest']);
-console.log(`\n✔ ${tag} 배포 완료. 설치된 앱들은 다음 실행 때 자동으로 업데이트돼요.\n`);
+// 4. 초안(draft)으로 올린다 — 아직 아무도 못 보고, "최신 버전" 링크도 이전 버전을 그대로 가리킨다
+run(gh, ['release', 'create', tag, ...files, '--title', `학회 캘린더 ${tag}`, '--generate-notes', '--draft']);
+
+// 5. 맥 빌드 실행 → 맥 파일까지 붙으면 워크플로가 릴리스를 공개한다
+const started = new Date(Date.now() - 5000).toISOString();
+run(gh, ['workflow', 'run', 'mac.yml', '-f', `tag=${tag}`]);
+console.log('\n▶ 맥 빌드 시작 (약 3분). 끝나면 Windows·Mac 파일이 함께 공개돼요.');
+let runId = '';
+for (let i = 0; i < 20 && !runId; i++) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000); // 3초 대기
+  runId = out(gh, ['run', 'list', '--workflow', 'mac.yml', '--event', 'workflow_dispatch', '--limit', '1',
+    '--json', 'databaseId,createdAt', '--jq', `.[] | select(.createdAt >= "${started}") | .databaseId`]);
+}
+if (!runId) fail('맥 빌드 실행을 찾지 못했어요. GitHub → Actions 에서 확인해 주세요. (릴리스는 아직 초안이에요)');
+try {
+  run(gh, ['run', 'watch', runId, '--exit-status', '--interval', '20']);
+} catch {
+  fail(`맥 빌드가 실패해서 ${tag} 는 아직 초안이에요. 사용자에게는 이전 버전이 그대로 보여요.\n  로그: gh run view ${runId} --log-failed`);
+}
+const draft = out(gh, ['release', 'view', tag, '--json', 'isDraft', '--jq', '.isDraft']);
+if (draft !== 'false') fail(`${tag} 가 아직 초안이에요. GitHub 릴리스 화면에서 확인해 주세요.`);
+console.log(`\n✔ ${tag} 배포 완료 (Windows + Mac). 설치된 앱들은 다음 실행 때 자동으로 업데이트돼요.\n`);
