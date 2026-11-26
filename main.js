@@ -205,7 +205,9 @@ app.on('web-contents-created', (_e, wc) => {
 });
 
 app.whenReady().then(() => {
-  app.setAppUserModelId('local.conf-calendar');
+  // 작업 표시줄 아이콘은 이 ID로 묶인다. 개발 실행(electron.exe)이 같은 ID를 쓰면 Windows가
+  // Electron 기본 아이콘을 이 ID에 캐시해 버리므로, 개발용은 다른 ID를 쓴다.
+  app.setAppUserModelId(app.isPackaged ? 'local.conf-calendar' : 'local.conf-calendar.dev');
   // 카메라·마이크·위치 등 권한은 거절하고, 마감 알림(notifications)만 허용
   const allow = new Set(['notifications']);
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(allow.has(perm)));
